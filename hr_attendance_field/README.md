@@ -23,6 +23,19 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 5. Al cerrar una asistencia válida o aprobada se crea su línea de horas en el proyecto.
    Las que están en revisión generan horas cuando Operaciones las aprueba (*Asistencias › Campo › Marcajes*).
 
+## Cargar la lista de WhatsApp (sin fotos)
+
+Para seguir con la costumbre actual de los supervisores (mensaje con número y nombre de obra y la lista de gente):
+
+1. Operaciones abre *Asistencias › Campo › Cargar lista de WhatsApp*, elige la fecha y pega el mensaje
+   (sirve con o sin la fecha y el nombre que agrega WhatsApp al copiar).
+2. Odoo reconoce la obra por su **Número de proyecto** (o por su nombre) y a cada persona entre todo el personal de
+   campo, incluida la gente prestada de otras cuadrillas. Marca en amarillo los nombres parecidos y en rojo los que no encontró.
+3. Al corregir un nombre, Odoo lo recuerda (*Nombres recordados*) y la próxima vez lo reconoce solo.
+4. **Registrar asistencia** crea la asistencia con la jornada del horario de cada empleado y su línea de horas en la obra.
+   Si la persona ya tiene asistencia ese día (por ejemplo, la pasó otro supervisor), no se duplica y se avisa.
+   Si la fecha es día no laborable según su horario, queda en revisión.
+
 ## Seguridad
 
 - Enlace personal con token secreto; **Generar enlace nuevo** invalida el anterior y revoca sus teléfonos.

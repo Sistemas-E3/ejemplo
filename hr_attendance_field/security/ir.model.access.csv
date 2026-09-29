@@ -2,3 +2,6 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_hr_field_device_ops,hr.field.device operaciones,model_hr_field_device,group_field_operations,1,1,1,1
 access_hr_field_face_ops,hr.field.face operaciones,model_hr_field_face,group_field_operations,1,1,1,1
 access_project_project_field_ops,project.project operaciones de campo,project.model_project_project,group_field_operations,1,1,0,0
+access_hr_field_alias_ops,hr.field.alias operaciones,model_hr_field_alias,group_field_operations,1,1,1,1
+access_hr_field_roster_import_ops,hr.field.roster.import operaciones,model_hr_field_roster_import,group_field_operations,1,1,1,1
+access_hr_field_roster_line_ops,hr.field.roster.line operaciones,model_hr_field_roster_line,group_field_operations,1,1,1,1

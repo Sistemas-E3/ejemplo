@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_roster_import_view_form" model="ir.ui.view">
+        <field name="name">hr.field.roster.import.form</field>
+        <field name="model">hr.field.roster.import</field>
+        <field name="arch" type="xml">
+            <form string="Cargar lista de WhatsApp">
+                <field name="state" invisible="1"/>
+                <group invisible="state != 'draft'">
+                    <field name="date"/>
+                    <field name="message" nolabel="1" colspan="2"
+                           placeholder="Pega aquí el mensaje del supervisor, por ejemplo:&#10;1234 Torre Norte&#10;Juan Pérez&#10;Pedro López"/>
+                </group>
+                <group invisible="state != 'preview'">
+                    <group>
+                        <field name="project_id" required="state == 'preview'" options="{'no_create': True}"/>
+                        <field name="supervisor_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="date"/>
+                        <field name="unmatched_count" string="Sin identificar" invisible="not unmatched_count"/>
+                        <field name="conflict_count" string="Ya registrados" invisible="not conflict_count"/>
+                    </group>
+                </group>
+                <field name="line_ids" invisible="state != 'preview'">
+                    <list editable="bottom" create="false" delete="false"
+                          decoration-danger="include and not employee_id"
+                          decoration-warning="include and (match == 'fuzzy' or conflict)"
+                          decoration-muted="not include">
+                        <field name="include" widget="boolean_toggle"/>
+                        <field name="raw_name"/>
+                        <field name="employee_id" options="{'no_create': True}"/>
+                        <field name="match" widget="badge"
+                               decoration-success="match in ('exact', 'alias')"
+                               decoration-warning="match == 'fuzzy'"
+                               decoration-danger="match == 'none'"/>
+                        <field name="conflict"/>
+                        <field name="suggested_employee_id" column_invisible="1"/>
+                    </list>
+                </field>
+                <footer>
+                    <button name="action_read_message" type="object" string="Leer mensaje" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_confirm" type="object" string="Registrar asistencia" class="btn-primary"
+                            invisible="state != 'preview'"/>
+                    <button name="action_back" type="object" string="Volver" invisible="state != 'preview'"/>
+                    <button special="cancel" string="Cancelar"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_roster_import_action" model="ir.actions.act_window">
+        <field name="name">Cargar lista de WhatsApp</field>
+        <field name="res_model">hr.field.roster.import</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="hr_field_alias_view_list" model="ir.ui.view">
+        <field name="name">hr.field.alias.list</field>
+        <field name="model">hr.field.alias</field>
+        <field name="arch" type="xml">
+            <list string="Nombres recordados" editable="bottom">
+                <field name="name"/>
+                <field name="employee_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_alias_action" model="ir.actions.act_window">
+        <field name="name">Nombres recordados</field>
+        <field name="res_model">hr.field.alias</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay nombres recordados</p>
+            <p>Cuando corriges un nombre al cargar una lista de WhatsApp, Odoo lo recuerda aquí para la próxima vez.</p>
+        </field>
+    </record>
+</odoo>

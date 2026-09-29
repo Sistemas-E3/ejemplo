@@ -26,6 +26,7 @@ Asistencias en campo
         'views/hr_employee_views.xml',
         'views/project_project_views.xml',
         'views/hr_attendance_views.xml',
+        'views/hr_field_roster_views.xml',
         'views/field_menus.xml',
     ],
     'installable': True,

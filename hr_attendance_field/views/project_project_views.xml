@@ -9,6 +9,7 @@
                 <page name="field_attendance" string="Obra en campo" groups="hr_attendance_field.group_field_operations">
                     <group>
                         <group string="Supervisores">
+                            <field name="field_code"/>
                             <field name="field_supervisor_ids" widget="many2many_tags"/>
                         </group>
                         <group string="Ubicación">
@@ -28,6 +29,7 @@
         <field name="priority">100</field>
         <field name="arch" type="xml">
             <list string="Obras" editable="bottom" create="false" delete="false">
+                <field name="field_code"/>
                 <field name="name" readonly="1"/>
                 <field name="field_supervisor_ids" widget="many2many_tags"/>
                 <field name="field_latitude"/>

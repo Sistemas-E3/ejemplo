@@ -4,6 +4,9 @@ from odoo import fields, models
 class ProjectProject(models.Model):
     _inherit = 'project.project'
 
+    field_code = fields.Char(
+        "Número de proyecto", index='btree_not_null', copy=False,
+        help="Número con el que los supervisores identifican la obra en sus mensajes.")
     field_latitude = fields.Float("Latitud de la obra", digits=(10, 7))
     field_longitude = fields.Float("Longitud de la obra", digits=(10, 7))
     field_radius = fields.Integer(
