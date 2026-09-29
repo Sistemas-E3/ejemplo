@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_employee_view_form_field" model="ir.ui.view">
+        <field name="name">hr.employee.form.field.attendance</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='hr_settings']" position="after">
+                <page name="field_attendance" string="Campo" groups="hr_attendance_field.group_field_operations">
+                    <group>
+                        <group string="Rol">
+                            <field name="field_role"/>
+                            <field name="field_supervisor_id" invisible="field_role != 'worker'"/>
+                            <field name="field_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
+                            <field name="field_active_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
+                            <field name="field_active_date" invisible="field_role != 'supervisor'"/>
+                            <field name="pin" string="PIN"/>
+                            <field name="field_pin_locked_until" invisible="not field_pin_locked_until"/>
+                        </group>
+                        <group string="Enlace de marcaje" invisible="not field_role">
+                            <field name="field_kiosk_url" widget="CopyClipboardChar" invisible="not field_token"/>
+                            <field name="field_token" invisible="1"/>
+                            <div colspan="2">
+                                <button name="action_field_regenerate_token" type="object" class="btn-secondary"
+                                        string="Generar enlace nuevo" icon="fa-refresh"
+                                        confirm="El enlace anterior y sus teléfonos dejarán de funcionar. ¿Continuar?"/>
+                                <button name="action_field_unlock_pin" type="object" class="btn-link"
+                                        string="Desbloquear PIN" invisible="not field_pin_locked_until"/>
+                            </div>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Rostro">
+                            <field name="field_face_consent_date"/>
+                            <field name="field_face_count"/>
+                            <div colspan="2">
+                                <button name="action_field_enroll_face" type="object" class="btn-primary"
+                                        string="Registrar rostro" icon="fa-camera"/>
+                                <button name="action_field_clear_faces" type="object" class="btn-link"
+                                        string="Borrar rostros" invisible="not field_face_count"
+                                        confirm="Se borrarán todas las fotos de referencia de este empleado. ¿Continuar?"/>
+                            </div>
+                        </group>
+                    </group>
+                    <field name="field_crew_ids" invisible="field_role != 'supervisor'" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="job_title"/>
+                            <field name="field_face_count"/>
+                        </list>
+                    </field>
+                    <field name="field_device_ids" invisible="not field_role" readonly="1">
+                        <list decoration-warning="state == 'pending'" decoration-muted="state == 'revoked'">
+                            <field name="name"/>
+                            <field name="create_date" string="Solicitado el"/>
+                            <field name="last_seen"/>
+                            <field name="state" widget="badge"/>
+                            <button name="action_approve" type="object" string="Aprobar" icon="fa-check" invisible="state == 'approved'"/>
+                            <button name="action_revoke" type="object" string="Revocar" icon="fa-ban" invisible="state == 'revoked'"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="hr_employee_view_list_field" model="ir.ui.view">
+        <field name="name">hr.employee.list.field.attendance</field>
+        <field name="model">hr.employee</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Personal de campo">
+                <field name="name"/>
+                <field name="field_role"/>
+                <field name="field_supervisor_id"/>
+                <field name="field_project_ids" widget="many2many_tags"/>
+                <field name="field_face_count"/>
+                <field name="field_face_consent_date" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_employee_field_action" model="ir.actions.act_window">
+        <field name="name">Personal de campo</field>
+        <field name="res_model">hr.employee</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_role', '!=', False)]</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_employee_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay personal de campo</p>
+            <p>Abre la ficha de un empleado y en la pestaña Campo asígnale el rol de supervisor o trabajador.</p>
+        </field>
+    </record>
+</odoo>

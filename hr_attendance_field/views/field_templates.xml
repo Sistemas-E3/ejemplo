@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="field_page_head" name="Asistencias en campo: head">
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="theme-color" content="#1f2937"/>
+        <link rel="stylesheet" href="/hr_attendance_field/static/src/css/field_kiosk.css"/>
+        <script src="/hr_attendance_field/static/lib/face-api/face-api.js"></script>
+        <script src="/hr_attendance_field/static/src/js/field_common.js"></script>
+    </template>
+
+    <template id="field_kiosk_page" name="Asistencias en campo: kiosco">&lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <title>Marcaje en campo</title>
+                <t t-call="hr_attendance_field.field_page_head"/>
+                <script src="/hr_attendance_field/static/src/js/field_kiosk.js" defer="defer"></script>
+            </head>
+            <body>
+                <main id="app" class="fk" t-att-data-token="token" t-att-data-supervisor="'1' if is_supervisor else '0'">
+                    <header class="fk-header">
+                        <div>
+                            <div class="fk-owner" t-esc="owner_name"/>
+                            <div class="fk-projects" id="active-projects">Cargando…</div>
+                        </div>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-projects" hidden="hidden">Obras de hoy</button>
+                    </header>
+
+                    <section id="screen-register" class="fk-card" hidden="hidden">
+                        <h2>Este teléfono no está autorizado</h2>
+                        <p>Escribe un nombre para reconocerlo y pide a Operaciones que lo apruebe.</p>
+                        <input type="text" id="device-name" class="fk-input" maxlength="60" placeholder="Ej. Teléfono de Juan"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-register">Solicitar autorización</button>
+                    </section>
+
+                    <section id="screen-pending" class="fk-card" hidden="hidden">
+                        <h2>Esperando aprobación</h2>
+                        <p>Operaciones debe aprobar este teléfono en Odoo (Asistencias › Campo › Teléfonos).</p>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-refresh">Revisar de nuevo</button>
+                    </section>
+
+                    <section id="screen-blocked" class="fk-card" hidden="hidden">
+                        <h2>Teléfono revocado</h2>
+                        <p>Este teléfono ya no puede marcar. Habla con Operaciones.</p>
+                    </section>
+
+                    <section id="screen-kiosk" hidden="hidden">
+                        <div class="fk-camera">
+                            <video id="video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+                            <canvas id="canvas" hidden="hidden"></canvas>
+                            <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
+                        </div>
+                        <div class="fk-gps" id="gps-status">Buscando ubicación…</div>
+                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="btn-punch" disabled="disabled">Marcar entrada / salida</button>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-change">Cambiar de obra</button>
+                    </section>
+
+                    <section id="panel-projects" class="fk-sheet" hidden="hidden">
+                        <h2>Obras de hoy</h2>
+                        <p>Marca las obras en las que trabajará tu gente hoy.</p>
+                        <div id="assignable-list" class="fk-list"></div>
+                        <input type="password" inputmode="numeric" id="activate-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-activate">Guardar obras</button>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-projects">Cancelar</button>
+                    </section>
+
+                    <section id="panel-choose" class="fk-sheet" hidden="hidden">
+                        <h2>¿En qué obra estás?</h2>
+                        <div id="choose-list" class="fk-list"></div>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-choose">Cancelar</button>
+                    </section>
+
+                    <section id="panel-pin" class="fk-sheet" hidden="hidden">
+                        <h2>Marcar con PIN</h2>
+                        <p>No se reconoció el rostro. Elige tu nombre y escribe tu PIN; el marcaje quedará en revisión.</p>
+                        <select id="pin-employee" class="fk-input"></select>
+                        <input type="password" inputmode="numeric" id="pin-code" class="fk-input" placeholder="PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-pin">Marcar</button>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-pin">Cancelar</button>
+                    </section>
+
+                    <div id="toast" class="fk-toast" hidden="hidden"></div>
+                </main>
+            </body>
+        </html>
+    </template>
+
+    <template id="field_enroll_page" name="Asistencias en campo: registrar rostro">&lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <title>Registrar rostro</title>
+                <t t-call="hr_attendance_field.field_page_head"/>
+                <script src="/hr_attendance_field/static/src/js/field_enroll.js" defer="defer"></script>
+            </head>
+            <body>
+                <main id="app" class="fk" t-att-data-employee="employee.id" t-att-data-consent="'1' if has_consent else '0'">
+                    <header class="fk-header">
+                        <div>
+                            <div class="fk-owner">Registrar rostro</div>
+                            <div class="fk-projects" t-esc="employee.name"/>
+                        </div>
+                    </header>
+                    <section class="fk-card" id="consent-box" t-if="not has_consent">
+                        <label class="fk-check">
+                            <input type="checkbox" id="consent"/>
+                            <span>El empleado firmó el consentimiento para el uso de sus datos biométricos.</span>
+                        </label>
+                    </section>
+                    <div class="fk-camera">
+                        <video id="video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+                        <canvas id="canvas" hidden="hidden"></canvas>
+                        <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
+                    </div>
+                    <p class="fk-gps">Toma 3 fotos con la cara de frente y con luz. Cambia un poco el ángulo entre cada una.</p>
+                    <div class="fk-shots" id="shots">Fotos: 0</div>
+                    <button type="button" class="fk-btn fk-btn-light fk-btn-big" id="btn-shot" disabled="disabled">Tomar foto</button>
+                    <button type="button" class="fk-btn fk-btn-primary" id="btn-save" disabled="disabled">Guardar</button>
+                    <div id="toast" class="fk-toast" hidden="hidden"></div>
+                </main>
+            </body>
+        </html>
+    </template>
+</odoo>

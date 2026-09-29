@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_field_root" name="Campo" parent="hr_attendance.menu_hr_attendance_root"
+              sequence="8" groups="hr_attendance_field.group_field_operations"/>
+    <menuitem id="menu_field_review" name="Marcajes" parent="menu_field_root" sequence="1"
+              action="hr_attendance_field_review_action"/>
+    <menuitem id="menu_field_employees" name="Personal de campo" parent="menu_field_root" sequence="2"
+              action="hr_employee_field_action"/>
+    <menuitem id="menu_field_projects" name="Obras" parent="menu_field_root" sequence="3"
+              action="project_project_field_action"/>
+    <menuitem id="menu_field_devices" name="Teléfonos" parent="menu_field_root" sequence="4"
+              action="hr_field_device_action"/>
+</odoo>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_attendance_view_form_field" model="ir.ui.view">
+        <field name="name">hr.attendance.form.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Campo" invisible="not field_state" name="field_attendance">
+                    <group>
+                        <field name="field_project_id"/>
+                        <field name="field_supervisor_id"/>
+                        <field name="field_state" readonly="1"/>
+                        <field name="field_review_reason" invisible="not field_review_reason"/>
+                        <field name="field_timesheet_id"/>
+                        <div colspan="2" groups="hr_attendance_field.group_field_operations">
+                            <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"
+                                    invisible="field_state not in ('review', 'rejected')"/>
+                            <button name="action_field_reject" type="object" string="Rechazar" class="btn-secondary"
+                                    invisible="field_state == 'rejected'"/>
+                        </div>
+                    </group>
+                    <group>
+                        <field name="in_gps_distance"/>
+                        <field name="out_gps_distance"/>
+                        <field name="in_face_distance"/>
+                        <field name="out_face_distance"/>
+                        <field name="in_field_device_id"/>
+                        <field name="out_field_device_id"/>
+                    </group>
+                    <group>
+                        <field name="in_field_photo" widget="image" options="{'size': [180, 180]}" invisible="not in_field_photo"/>
+                    </group>
+                    <group>
+                        <field name="out_field_photo" widget="image" options="{'size': [180, 180]}" invisible="not out_field_photo"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_list_field_inherit" model="ir.ui.view">
+        <field name="name">hr.attendance.list.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+        <field name="arch" type="xml">
+            <field name="check_in" position="before">
+                <field name="field_project_id" optional="show"/>
+            </field>
+            <field name="worked_hours" position="after">
+                <field name="field_state" optional="show" widget="badge"
+                       decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
+                       decoration-danger="field_state == 'rejected'"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_list_field" model="ir.ui.view">
+        <field name="name">hr.attendance.list.field.review</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Marcajes en campo" create="false" duplicate="false">
+                <header>
+                    <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"/>
+                    <button name="action_field_reject" type="object" string="Rechazar"/>
+                </header>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="field_project_id"/>
+                <field name="field_supervisor_id" optional="show"/>
+                <field name="check_in"/>
+                <field name="check_out"/>
+                <field name="worked_hours" widget="float_time"/>
+                <field name="in_gps_distance" optional="show"/>
+                <field name="field_review_reason" optional="show"/>
+                <field name="field_state" widget="badge"
+                       decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
+                       decoration-danger="field_state == 'rejected'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_search_field" model="ir.ui.view">
+        <field name="name">hr.attendance.search.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="field_project_id"/>
+                <field name="field_supervisor_id"/>
+                <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
+                <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
+                <group>
+                    <filter name="group_project" string="Obra" context="{'group_by': 'field_project_id'}"/>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_attendance_field_review_action" model="ir.actions.act_window">
+        <field name="name">Marcajes por revisar</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_review': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
+            <p>Aquí aparecen los marcajes fuera de obra, sin GPS o hechos con PIN.</p>
+        </field>
+    </record>
+</odoo>
