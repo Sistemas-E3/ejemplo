@@ -1,10 +1,6 @@
 import difflib
 import re
 import unicodedata
-from datetime import datetime, time, timedelta
-
-import pytz
-
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -24,8 +20,6 @@ HEADER_WORDS = {
     'lista', 'asistencia', 'personal', 'gente', 'trabajadores', 'hoy', 'buenos', 'dias', 'buen', 'dia',
     'de', 'del', 'la', 'el', 'en', 'y', 'que', 'ingreso', 'ingresaron', 'entraron', 'entrada',
 }
-DEFAULT_START = time(8, 0)
-DEFAULT_HOURS = 8.0
 
 
 def normalize(text):
@@ -367,35 +361,6 @@ class HrFieldRosterImport(models.TransientModel):
             'name': _("Cargar lista de WhatsApp"),
         }
 
-    def _employee_day(self, employee):
-        """Return (work intervals as naive UTC pairs, hours of a full day, regular working day)."""
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
-        start = tz.localize(datetime.combine(self.date, time.min))
-        end = tz.localize(datetime.combine(self.date, time.max))
-        calendar = employee.resource_calendar_id
-        if calendar and employee.resource_id:
-            intervals = sorted(
-                (i[0].astimezone(pytz.utc).replace(tzinfo=None), i[1].astimezone(pytz.utc).replace(tzinfo=None))
-                for i in calendar._work_intervals_batch(start, end, employee.resource_id)[employee.resource_id.id])
-            if intervals:
-                hours = sum((e - s).total_seconds() for s, e in intervals) / 3600
-                return intervals, hours, True
-        hours = (calendar.hours_per_day if calendar else 0) or DEFAULT_HOURS
-        check_in = tz.localize(datetime.combine(self.date, DEFAULT_START)).astimezone(pytz.utc).replace(tzinfo=None)
-        return [(check_in, check_in + timedelta(hours=hours))], hours, False
-
-    @staticmethod
-    def _end_after(intervals, hours):
-        """Point in time after working ``hours`` along the schedule intervals."""
-        remaining = timedelta(hours=hours)
-        end = intervals[0][0]
-        for start, stop in intervals:
-            if remaining <= stop - start:
-                return start + remaining
-            remaining -= stop - start
-            end = stop
-        return end + remaining
-
     def _learn_aliases(self, lines):
         Alias = self.env['hr.field.alias']
         for line in lines:
@@ -433,56 +398,14 @@ class HrFieldRosterImport(models.TransientModel):
             raise UserError(_("Hay %s nombres sin identificar: elige el empleado o quita la palomita.", len(missing)))
         self._learn_aliases(lines)
 
-        Attendance = self.env['hr.attendance']
-        done, skipped, review = [], [], []
-        for employee in lines.employee_id:
-            employee_lines = lines.filtered(lambda l: l.employee_id == employee)
-            intervals, day_hours, regular = self._employee_day(employee)
-            existing = Attendance.search([('employee_id', '=', employee.id), ('date', '=', self.date)])
-            if existing and (len(existing) > 1 or not existing.field_allocation_ids):
-                skipped.append(employee.name)
-                continue
-            allocations = [{
-                'project_id': line.block_id.project_id.id,
-                'name': line.block_id.title,
-                'fraction': line.fraction,
-                'hours': line.hours or line.fraction * day_hours,
-                'supervisor_id': self.supervisor_id.id,
-            } for line in employee_lines]
-            previous = existing.field_allocation_ids
-            total_fraction = sum(previous.mapped('fraction')) + sum(a['fraction'] for a in allocations)
-            total_hours = sum(previous.mapped('hours')) + sum(a['hours'] for a in allocations)
-            reasons = []
-            if not regular:
-                reasons.append(_("Día no laborable según su horario"))
-            if total_fraction > 1.001:
-                reasons.append(_("Reportado por más de una jornada (%s)", round(total_fraction, 2)))
-            projects = previous.project_id | lines.filtered(lambda l: l.employee_id == employee).block_id.project_id
-            vals = {
-                'check_out': self._end_after(intervals, total_hours),
-                'field_project_id': projects.id if len(projects) == 1 else False,
-            }
-            if reasons:
-                vals['field_state'] = 'review'
-            if existing:
-                attendance = existing
-                attendance.write(vals)
-                for reason in reasons:
-                    attendance._field_add_review_reason(reason)
-            else:
-                attendance = Attendance.create({
-                    'employee_id': employee.id,
-                    'check_in': intervals[0][0],
-                    'in_mode': 'manual',
-                    'out_mode': 'manual',
-                    'field_supervisor_id': self.supervisor_id.id,
-                    'field_state': 'valid',
-                    'field_review_reason': '\n'.join(reasons) or False,
-                    **vals,
-                })
-            self.env['hr.field.allocation'].create([dict(a, attendance_id=attendance.id) for a in allocations])
-            (review if attendance.field_state == 'review' else done).append(employee.name)
-
+        result = self.env['hr.field.service']._register_day(self.date, self.supervisor_id, [{
+            'employee': line.employee_id,
+            'project': line.block_id.project_id,
+            'name': line.block_id.title,
+            'fraction': line.fraction,
+            'hours': line.hours,
+        } for line in lines])
+        done, review, skipped = result['done'], result['review'], result['skipped']
         message = _("Se registraron %s personas.", len(done) + len(review))
         if review:
             message += " " + _("En revisión: %s.", ", ".join(review))

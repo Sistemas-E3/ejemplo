@@ -32,7 +32,7 @@
     }
 
     function show(screen) {
-        for (const id of ["screen-register", "screen-pending", "screen-blocked", "screen-kiosk"]) {
+        for (const id of ["screen-register", "screen-pending", "screen-blocked", "screen-kiosk", "screen-roll"]) {
             $(id).hidden = id !== screen;
         }
     }
@@ -81,9 +81,249 @@
             return;
         }
         state = result;
-        show("screen-kiosk");
-        renderActive();
-        startKiosk();
+        if (state.role === "supervisor") {
+            setMode(mode);
+        } else {
+            show("screen-kiosk");
+            renderActive();
+            startKiosk();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Pase de lista (supervisor): palomear quién vino, sin cámara
+    // ------------------------------------------------------------------
+
+    let mode = "roll";
+    let roll = null;
+    let people = [];
+
+    function setMode(value) {
+        mode = value;
+        $("btn-mode").hidden = false;
+        if (mode === "roll") {
+            show("screen-roll");
+            $("btn-mode").textContent = "Cámara";
+            $("btn-projects").hidden = true;
+            $("active-projects").textContent = "Palomea a la gente que vino";
+            loadRoll().catch((error) => toast(error.message, "error", 6000));
+        } else {
+            show("screen-kiosk");
+            $("btn-mode").textContent = "Pase de lista";
+            renderActive();
+            startKiosk();
+        }
+    }
+
+    function plain(text) {
+        return (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function dayLabel(iso, index) {
+        const [y, m, d] = iso.split("-");
+        return (index === 0 ? "Hoy" : "Ayer") + " " + d + "/" + m;
+    }
+
+    async function loadRoll(day) {
+        const result = await rpc(base + "/lista", { device_key: deviceKey, date: day || (roll && roll.date) });
+        if (result.error) {
+            toast(result.error, "error", 6000);
+            return;
+        }
+        roll = result;
+        renderDays();
+        renderRollProjects();
+        applyRegistered();
+    }
+
+    function renderDays() {
+        const box = $("roll-days");
+        box.replaceChildren();
+        roll.days.forEach((day, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "fk-btn " + (day === roll.date ? "fk-btn-selected" : "fk-btn-light");
+            button.textContent = dayLabel(day, index);
+            button.addEventListener("click", () => loadRoll(day).catch((e) => toast(e.message, "error", 6000)));
+            box.appendChild(button);
+        });
+    }
+
+    function renderRollProjects() {
+        const select = $("roll-project");
+        const current = select.value;
+        select.replaceChildren();
+        for (const project of roll.projects) {
+            const option = document.createElement("option");
+            option.value = project.id;
+            const count = (roll.registered[project.id] || []).length;
+            option.textContent = project.name + (count ? " · enviada (" + count + ")" : "");
+            select.appendChild(option);
+        }
+        if (!roll.projects.length) {
+            const option = document.createElement("option");
+            option.textContent = "Operaciones no te ha asignado obras";
+            select.appendChild(option);
+        }
+        if (roll.projects.some((p) => String(p.id) === current)) {
+            select.value = current;
+        }
+        select.disabled = !roll.projects.length;
+        $("roll-send").disabled = !roll.projects.length;
+    }
+
+    function applyRegistered() {
+        const registered = roll.registered[$("roll-project").value] || [];
+        const byId = new Map(registered.map((r) => [r.employee_id, r.fraction]));
+        people = roll.crew.map((e) => ({
+            id: e.id, name: e.name, extra: false, checked: byId.has(e.id), fraction: byId.get(e.id) || 1,
+        }));
+        for (const r of registered) {
+            const other = roll.others.find((e) => e.id === r.employee_id);
+            if (other && !people.some((p) => p.id === other.id)) {
+                people.push({ id: other.id, name: other.name, extra: true, checked: true, fraction: r.fraction });
+            }
+        }
+        const saved = $("roll-saved");
+        saved.hidden = !registered.length;
+        saved.textContent = registered.length
+            ? "Ya enviaste esta lista con " + registered.length + " personas. Si la cambias y la vuelves a enviar, se reemplaza."
+            : "";
+        $("roll-search").value = "";
+        $("roll-results").replaceChildren();
+        renderPeople();
+    }
+
+    function renderPeople() {
+        const list = $("roll-list");
+        list.replaceChildren();
+        if (!people.length) {
+            list.textContent = "No tienes cuadrilla asignada; busca a la gente abajo.";
+        }
+        for (const person of people) {
+            const row = document.createElement("div");
+            row.className = "fk-person";
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = person.checked;
+            const name = document.createElement("span");
+            name.textContent = person.name;
+            const notes = [];
+            if (person.extra) {
+                notes.push("otra cuadrilla");
+            }
+            const projectId = Number($("roll-project").value);
+            for (const busy of roll.busy[person.id] || []) {
+                if (!(busy.mine && busy.project_id === projectId)) {
+                    notes.push("ya tiene " + busy.label);
+                }
+            }
+            if (notes.length) {
+                const note = document.createElement("small");
+                note.textContent = " · " + notes.join(" · ");
+                name.appendChild(note);
+            }
+            label.append(input, name);
+            const half = document.createElement("button");
+            half.type = "button";
+            half.className = "fk-btn fk-btn-light fk-half";
+            half.textContent = person.fraction === 1 ? "Día completo" : "½ día";
+            half.hidden = !person.checked;
+            half.addEventListener("click", () => {
+                person.fraction = person.fraction === 1 ? 0.5 : 1;
+                renderPeople();
+            });
+            input.addEventListener("change", () => {
+                person.checked = input.checked;
+                renderPeople();
+            });
+            row.append(label, half);
+            list.appendChild(row);
+        }
+        const count = people.filter((p) => p.checked).length;
+        $("roll-count").textContent = count + (count === 1 ? " persona" : " personas");
+    }
+
+    function searchOthers() {
+        const query = plain($("roll-search").value.trim());
+        const box = $("roll-results");
+        box.replaceChildren();
+        if (query.length < 2) {
+            return;
+        }
+        const taken = new Set(people.map((p) => p.id));
+        const words = query.split(/\s+/);
+        const matches = roll.others
+            .filter((e) => !taken.has(e.id) && words.every((w) => plain(e.name).includes(w)))
+            .slice(0, 6);
+        if (!matches.length) {
+            box.textContent = "No se encontró a nadie con ese nombre.";
+        }
+        for (const employee of matches) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "fk-btn fk-result";
+            button.textContent = "+ " + employee.name;
+            button.addEventListener("click", () => {
+                people.push({ id: employee.id, name: employee.name, extra: true, checked: true, fraction: 1 });
+                $("roll-search").value = "";
+                box.replaceChildren();
+                renderPeople();
+            });
+            box.appendChild(button);
+        }
+    }
+
+    async function sendRoll() {
+        if (busy) {
+            return;
+        }
+        const entries = people.filter((p) => p.checked).map((p) => ({ employee_id: p.id, fraction: p.fraction }));
+        const projectId = Number($("roll-project").value);
+        const already = (roll.registered[projectId] || []).length;
+        if (!entries.length && !already) {
+            toast("Palomea al menos a una persona", "error");
+            return;
+        }
+        if (!entries.length && !window.confirm("¿Quitar la lista de esta obra?")) {
+            return;
+        }
+        if (!$("roll-pin").value) {
+            toast("Escribe tu PIN", "error");
+            return;
+        }
+        busy = true;
+        $("roll-send").disabled = true;
+        try {
+            const result = await rpc(base + "/lista/guardar", {
+                device_key: deviceKey,
+                pin: $("roll-pin").value,
+                date: roll.date,
+                project_id: projectId,
+                entries: entries,
+            });
+            if (result.error) {
+                toast(result.error, "error", 6000);
+                return;
+            }
+            $("roll-pin").value = "";
+            const total = result.done.length + result.review.length;
+            let message = "Lista enviada: " + total + (total === 1 ? " persona" : " personas") + " en " + result.project + ".";
+            if (result.review.length) {
+                message += " En revisión: " + result.review.join(", ") + ".";
+            }
+            if (result.skipped.length) {
+                message += " Ya marcaron con cámara: " + result.skipped.join(", ") + ".";
+            }
+            toast(message, result.review.length || result.skipped.length ? "warning" : "success", 7000);
+            await loadRoll(roll.date);
+        } catch (error) {
+            toast(error.message, "error", 6000);
+        } finally {
+            busy = false;
+            $("roll-send").disabled = !(roll && roll.projects.length);
+        }
     }
 
     let kioskStarted = false;
@@ -291,6 +531,17 @@
     }
 
     $("btn-register").addEventListener("click", register);
+    $("btn-mode").addEventListener("click", () => setMode(mode === "roll" ? "camera" : "roll"));
+    $("roll-project").addEventListener("change", applyRegistered);
+    $("roll-search").addEventListener("input", searchOthers);
+    $("roll-send").addEventListener("click", sendRoll);
+    $("roll-all").addEventListener("click", () => {
+        const all = people.every((p) => p.checked);
+        for (const person of people) {
+            person.checked = !all;
+        }
+        renderPeople();
+    });
     $("btn-refresh").addEventListener("click", () => refresh().catch((e) => toast(e.message, "error")));
     $("btn-punch").addEventListener("click", () => punch(false));
     $("btn-change").addEventListener("click", () => punch(true));

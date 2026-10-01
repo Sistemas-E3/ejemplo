@@ -24,7 +24,10 @@
                             <div class="fk-owner" t-esc="owner_name"/>
                             <div class="fk-projects" id="active-projects">Cargando…</div>
                         </div>
-                        <button type="button" class="fk-btn fk-btn-light" id="btn-projects" hidden="hidden">Obras de hoy</button>
+                        <div class="fk-header-actions">
+                            <button type="button" class="fk-btn fk-btn-light" id="btn-mode" hidden="hidden">Cámara</button>
+                            <button type="button" class="fk-btn fk-btn-light" id="btn-projects" hidden="hidden">Obras de hoy</button>
+                        </div>
                     </header>
 
                     <section id="screen-register" class="fk-card" hidden="hidden">
@@ -43,6 +46,22 @@
                     <section id="screen-blocked" class="fk-card" hidden="hidden">
                         <h2>Teléfono revocado</h2>
                         <p>Este teléfono ya no puede marcar. Habla con Operaciones.</p>
+                    </section>
+
+                    <section id="screen-roll" class="fk-card" hidden="hidden">
+                        <h2>Pase de lista</h2>
+                        <div class="fk-days" id="roll-days"></div>
+                        <select id="roll-project" class="fk-input" aria-label="Obra"></select>
+                        <p id="roll-saved" hidden="hidden"></p>
+                        <div class="fk-row">
+                            <span class="fk-muted" id="roll-count">0 personas</span>
+                            <button type="button" class="fk-link" id="roll-all">Marcar a todos</button>
+                        </div>
+                        <div id="roll-list" class="fk-list"></div>
+                        <input type="search" id="roll-search" class="fk-input" placeholder="Agregar gente de otra cuadrilla…" autocomplete="off"/>
+                        <div id="roll-results" class="fk-list"></div>
+                        <input type="password" inputmode="numeric" id="roll-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="roll-send">Enviar lista</button>
                     </section>
 
                     <section id="screen-kiosk" hidden="hidden">

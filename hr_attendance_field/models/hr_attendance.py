@@ -89,8 +89,9 @@ class HrAttendance(models.Model):
         for attendance in self.sudo():
             wanted = attendance._field_wanted_hours()
             lines = attendance.field_timesheet_ids
-            for line in lines.filtered(lambda l: l.project_id not in wanted):
-                line.unlink()
+            stale = lines.filtered(lambda l: l.project_id not in wanted)
+            stale.unlink()
+            lines -= stale
             for project, hours in wanted.items():
                 vals = {
                     'name': _("Asistencia en obra"),

@@ -6,3 +6,4 @@ from . import hr_field_face
 from . import hr_field_roster
 from . import hr_field_service
 from . import project_project
+from . import hr_field_day

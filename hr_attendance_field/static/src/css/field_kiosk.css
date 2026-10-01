@@ -31,6 +31,7 @@ body {
 .fk-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 85vh; overflow-y: auto; border-radius: 16px 16px 0 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, .2); z-index: 10; }
 #screen-kiosk { display: flex; flex-direction: column; gap: 12px; }
 #screen-kiosk[hidden], .fk-sheet[hidden], .fk-card[hidden] { display: none; }
+@media (prefers-color-scheme: dark) { .fk-link { color: #d8b4d0; } }
 .fk-camera { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3; }
 .fk-camera video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .fk-camera-hint { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 14px; }
@@ -44,6 +45,23 @@ body {
 .fk-list { display: flex; flex-direction: column; gap: 8px; }
 .fk-check { display: flex; gap: 12px; align-items: center; padding: 8px 0; }
 .fk-check input { width: 22px; height: 22px; }
+.fk-header-actions { display: flex; gap: 8px; }
+.fk-header-actions .fk-btn { padding: 8px 12px; font-size: 14px; }
+.fk-days { display: flex; gap: 8px; }
+.fk-days .fk-btn { flex: 1; text-align: center; }
+.fk-btn-selected { background: var(--fk-primary); border-color: var(--fk-primary); color: var(--fk-primary-text); font-weight: 600; }
+.fk-row { display: flex; justify-content: space-between; align-items: center; }
+.fk-muted { color: var(--fk-muted); font-size: 14px; }
+.fk-link { background: none; border: 0; padding: 4px 0; color: var(--fk-primary); font-size: 15px; font-weight: 600; }
+.fk-person { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--fk-border); }
+.fk-person label { flex: 1; display: flex; gap: 12px; align-items: center; min-height: 40px; }
+.fk-person input { width: 24px; height: 24px; flex: none; }
+.fk-person small { color: var(--fk-muted); }
+.fk-half { flex: none; min-width: 88px; padding: 8px 10px; font-size: 14px; text-align: center; }
+.fk-half[hidden] { display: none; }
+.fk-result { text-align: left; }
+#screen-roll p[hidden] { display: none; }
+#screen-roll p { color: var(--fk-text); }
 .fk-toast { position: fixed; left: 16px; right: 16px; bottom: 16px; padding: 14px 16px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 20; }
 .fk-toast[hidden] { display: none; }
 .fk-toast-success { background: var(--fk-success); }

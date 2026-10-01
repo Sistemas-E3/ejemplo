@@ -52,6 +52,20 @@ Jhonatan Peña
    Si la persona ya marcó con el teléfono no se duplica; si se cargan más mensajes del mismo día se suman.
    Si suma más de una jornada o es día no laborable, queda en revisión.
 
+## Pase de lista desde el teléfono (sin escribir nombres)
+
+Otra forma de reportar, además de WhatsApp (las dos conviven y se suman):
+
+1. El supervisor abre su enlace (*Personal de campo › Campo › enlace*) en su teléfono aprobado. Entra directo a **Pase de lista**;
+   el botón *Cámara* lleva al marcaje con reconocimiento facial.
+2. Elige **Hoy** o **Ayer** y una de sus obras asignadas (solo ve esas).
+3. Palomea a su cuadrilla y cambia a **½ día** quien corresponda. La gente prestada se agrega buscándola por nombre.
+   Junto a cada persona se ve si ya tiene algo ese día (otra obra, otro supervisor o marcaje con cámara).
+4. Escribe su PIN y toca **Enviar lista**. Se crean las asistencias y las horas igual que con WhatsApp.
+   Si vuelve a enviar la lista de esa obra y día, **reemplaza** la anterior (sirve para corregir).
+
+Para actividades internas (curso, taller) Operaciones debe asignarle también ese proyecto al supervisor.
+
 ## Seguridad
 
 - Enlace personal con token secreto; **Generar enlace nuevo** invalida el anterior y revoca sus teléfonos.

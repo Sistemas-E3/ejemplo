@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import date
 
 from odoo import _, http
 from odoo.exceptions import AccessError, UserError, ValidationError
@@ -26,6 +27,18 @@ class FieldAttendance(http.Controller):
             return None
         device.last_seen = http.request.env.cr.now()
         return device
+
+    def _find_approved(self, owner, device_key):
+        """Approved phone, without writing (for read-only routes)."""
+        device = request.env['hr.field.device'].sudo()._field_find(owner, device_key)
+        return device if device and device.state == 'approved' else None
+
+    @staticmethod
+    def _parse_date(value):
+        try:
+            return date.fromisoformat(value) if value else None
+        except (TypeError, ValueError):
+            return None
 
     def _safe(self, func, *args, **kwargs):
         try:
@@ -97,6 +110,22 @@ class FieldAttendance(http.Controller):
             descriptor=descriptor, employee_id=employee_id, pin=pin, project_id=project_id,
             latitude=latitude, longitude=longitude, photo=photo, change_project=bool(change_project),
         )
+
+    @http.route('/campo/<string:token>/lista', type='jsonrpc', auth='public', readonly=True)
+    def roll_state(self, token, device_key=None, date=None):
+        owner = self._owner(token)
+        device = owner and self._find_approved(owner, device_key)
+        if not device:
+            return {'error': _("Teléfono no autorizado.")}
+        return self._safe(self._service()._roll_state, owner, self._parse_date(date))
+
+    @http.route('/campo/<string:token>/lista/guardar', type='jsonrpc', auth='public')
+    def roll_save(self, token, device_key=None, pin=None, date=None, project_id=None, entries=None):
+        owner = self._owner(token)
+        device = owner and self._approved_device(owner, device_key)
+        if not device:
+            return {'error': _("Teléfono no autorizado.")}
+        return self._safe(self._service()._roll_save, owner, pin, self._parse_date(date), project_id, entries)
 
     # ------------------------------------------------------------------
     # Face enrolment (Operaciones, logged in)
