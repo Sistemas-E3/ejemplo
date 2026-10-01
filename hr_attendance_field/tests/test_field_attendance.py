@@ -215,7 +215,7 @@ class TestFieldAttendanceHttp(HttpCase):
         employee = self.env['hr.employee'].create({'name': 'Nuevo', 'field_role': 'worker'})
         self.env['res.users'].create({
             'name': 'Interno', 'login': 'interno', 'password': 'interno12345',
-            'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
+            'groups_id': [(6, 0, [self.env.ref('base.group_user').id])],
         })
         self.authenticate('interno', 'interno12345')
         response = self.url_open(f'/campo/enrolar/{employee.id}')

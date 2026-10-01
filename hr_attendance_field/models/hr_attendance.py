@@ -1,3 +1,5 @@
+import pytz
+
 from odoo import _, api, fields, models
 
 FIELD_STATES = [
@@ -17,6 +19,8 @@ class HrAttendance(models.Model):
     field_supervisor_id = fields.Many2one('hr.employee', string="Supervisor", readonly=True)
     field_state = fields.Selection(FIELD_STATES, string="Estado en campo", tracking=True, index=True)
     field_review_reason = fields.Text("Motivo de revisión", readonly=True)
+    field_date = fields.Date("Día", compute='_compute_field_date', store=True, index=True,
+                             help="Día de la entrada en la zona horaria del empleado.")
     in_field_device_id = fields.Many2one('hr.field.device', string="Teléfono de entrada", readonly=True)
     out_field_device_id = fields.Many2one('hr.field.device', string="Teléfono de salida", readonly=True)
     in_field_photo = fields.Image("Foto de entrada", max_width=640, max_height=640, attachment=True, readonly=True)
@@ -31,6 +35,15 @@ class HrAttendance(models.Model):
         help="Cuando la asistencia viene de una lista de WhatsApp, cómo se reparte el día entre proyectos.")
     field_timesheet_ids = fields.One2many(
         'account.analytic.line', 'field_attendance_id', string="Líneas de horas", readonly=True)
+
+    @api.depends('check_in', 'employee_id')
+    def _compute_field_date(self):
+        for attendance in self:
+            if not attendance.check_in:
+                attendance.field_date = False
+                continue
+            tz = pytz.timezone(attendance.employee_id._get_tz() or 'UTC')
+            attendance.field_date = pytz.utc.localize(attendance.check_in).astimezone(tz).date()
 
     def _field_add_review_reason(self, reason):
         for attendance in self:
@@ -97,7 +110,7 @@ class HrAttendance(models.Model):
                     'name': _("Asistencia en obra"),
                     'project_id': project.id,
                     'employee_id': attendance.employee_id.id,
-                    'date': attendance.date,
+                    'date': attendance.field_date,
                     'unit_amount': hours,
                     'field_attendance_id': attendance.id,
                 }

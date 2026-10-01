@@ -44,6 +44,5 @@
         <field name="res_model">project.project</field>
         <field name="view_mode">list</field>
         <field name="view_id" ref="project_project_view_list_field"/>
-        <field name="domain">[('is_template', '=', False)]</field>
     </record>
 </odoo>

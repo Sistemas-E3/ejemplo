@@ -56,7 +56,7 @@ class TestFieldRoll(RollMixin, TransactionCase):
             {'employee_id': employee.id, 'fraction': fraction} for employee, fraction in entries])
 
     def _attendance(self, employee):
-        return self.env['hr.attendance'].search([('employee_id', '=', employee.id), ('date', '=', MONDAY)])
+        return self.env['hr.attendance'].search([('employee_id', '=', employee.id), ('field_date', '=', MONDAY)])
 
     def test_state(self):
         state = self.service._roll_state(self.supervisor)
@@ -142,7 +142,7 @@ class TestFieldRoll(RollMixin, TransactionCase):
     def test_yesterday_allowed(self):
         self._save([(self.pedro, 1.0)], day=date(2026, 9, 27))
         attendance = self.env['hr.attendance'].search([('employee_id', '=', self.pedro.id)])
-        self.assertEqual(attendance.date, date(2026, 9, 27))
+        self.assertEqual(attendance.field_date, date(2026, 9, 27))
 
     def test_camera_attendance_not_duplicated(self):
         self.env['hr.attendance'].create({

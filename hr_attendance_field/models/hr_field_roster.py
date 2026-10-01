@@ -145,7 +145,7 @@ class HrFieldAlias(models.Model):
     name = fields.Char("Como lo escriben", required=True, index=True)
     employee_id = fields.Many2one('hr.employee', "Empleado", required=True, ondelete='cascade')
 
-    _name_unique = models.Constraint('UNIQUE(name)', "Ese nombre ya está asociado a un empleado.")
+    _sql_constraints = [('name_unique', 'UNIQUE(name)', "Ese nombre ya está asociado a un empleado.")]
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -167,7 +167,7 @@ class HrFieldProjectAlias(models.Model):
     name = fields.Char("Como lo escriben", required=True, index=True)
     project_id = fields.Many2one('project.project', "Proyecto", required=True, ondelete='cascade')
 
-    _name_unique = models.Constraint('UNIQUE(name)', "Ese texto ya está asociado a un proyecto.")
+    _sql_constraints = [('name_unique', 'UNIQUE(name)', "Ese texto ya está asociado a un proyecto.")]
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -210,7 +210,7 @@ class HrFieldRosterImport(models.TransientModel):
     @api.model
     def _project_by_code(self, code):
         Project = self.env['project.project'].with_context(active_test=True)
-        domain = [('is_template', '=', False)]
+        domain = []
         variants = {code.strip(), re.sub(r'\s+', '', code)}
         core = re.match(r'\s*(\d[\d\-/]*\d|\d)', code)
         if core:
@@ -239,7 +239,7 @@ class HrFieldRosterImport(models.TransientModel):
             project = self._project_by_code(number)
             if project:
                 return project
-        matches = Project.search([('is_template', '=', False)]).filtered(
+        matches = Project.search([]).filtered(
             lambda p: normalize(p.name) and (normalize(p.name) == key or normalize(p.name) in key))
         return matches.sorted(lambda p: len(p.name), reverse=True)[:1]
 
@@ -434,7 +434,7 @@ class HrFieldRosterBlock(models.TransientModel):
     sequence = fields.Integer()
     title = fields.Char("Como viene en el mensaje", readonly=True)
     alias_key = fields.Char()
-    project_id = fields.Many2one('project.project', "Proyecto", domain=[('is_template', '=', False)])
+    project_id = fields.Many2one('project.project', "Proyecto")
     suggested_project_id = fields.Many2one('project.project')
     match = fields.Selection([
         ('exact', "Coincide"),
@@ -480,7 +480,7 @@ class HrFieldRosterLine(models.TransientModel):
                 continue
             existing = self.env['hr.attendance'].search([
                 ('employee_id', '=', line.employee_id.id),
-                ('date', '=', line.wizard_id.date),
+                ('field_date', '=', line.wizard_id.date),
             ], limit=1)
             others = line.wizard_id.line_ids.filtered(
                 lambda l: l.include and l.employee_id == line.employee_id)

@@ -42,7 +42,7 @@ class HrEmployee(models.Model):
     field_pin_failures = fields.Integer(groups=OPS_GROUP, copy=False)
     field_pin_locked_until = fields.Datetime("PIN bloqueado hasta", groups=OPS_GROUP, copy=False)
 
-    _field_token_unique = models.Constraint('UNIQUE(field_token)', "La clave del enlace debe ser única.")
+    _sql_constraints = [('field_token_unique', 'UNIQUE(field_token)', "La clave del enlace debe ser única.")]
 
     @api.depends('field_token')
     def _compute_field_kiosk_url(self):

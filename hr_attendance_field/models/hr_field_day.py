@@ -83,7 +83,7 @@ class HrFieldService(models.AbstractModel):
         touched = Attendance
         if replace_project:
             previous = Allocation.search([
-                ('attendance_id.date', '=', day),
+                ('attendance_id.field_date', '=', day),
                 ('supervisor_id', '=', supervisor.id),
                 ('project_id', '=', replace_project.id),
             ])
@@ -97,7 +97,7 @@ class HrFieldService(models.AbstractModel):
         processed = Attendance
         for employee, employee_entries in by_employee.items():
             intervals, day_hours, regular = self._employee_day(employee, day)
-            existing = Attendance.search([('employee_id', '=', employee.id), ('date', '=', day)])
+            existing = Attendance.search([('employee_id', '=', employee.id), ('field_date', '=', day)])
             if len(existing) > 1 or (existing and not existing.field_allocation_ids and existing not in touched):
                 result['skipped'].append(employee.name)
                 continue
@@ -158,7 +158,7 @@ class HrFieldService(models.AbstractModel):
         crew, others = self._roll_people(owner)
         registered = {}
         allocations = self.env['hr.field.allocation'].search([
-            ('attendance_id.date', '=', day),
+            ('attendance_id.field_date', '=', day),
             ('supervisor_id', '=', owner.id),
             ('project_id', 'in', owner.field_project_ids.ids),
         ])
@@ -181,7 +181,7 @@ class HrFieldService(models.AbstractModel):
     def _roll_busy(self, owner, day, employees):
         """What else each person already has that day, so the supervisor sees it while ticking."""
         busy = {}
-        for attendance in self.env['hr.attendance'].search([('employee_id', 'in', employees.ids), ('date', '=', day)]):
+        for attendance in self.env['hr.attendance'].search([('employee_id', 'in', employees.ids), ('field_date', '=', day)]):
             notes = busy.setdefault(attendance.employee_id.id, [])
             if not attendance.field_allocation_ids:
                 notes.append({'project_id': False, 'mine': False, 'label': _("marcó con cámara")})
