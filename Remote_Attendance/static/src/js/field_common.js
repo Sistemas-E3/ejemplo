@@ -2,7 +2,7 @@
 (function () {
     "use strict";
 
-    const MODEL_URL = "/hr_attendance_field/static/lib/face-api/model";
+    const MODEL_URL = "/Remote_Attendance/static/lib/face-api/model";
     let modelsPromise = null;
     let toastTimer = null;
 

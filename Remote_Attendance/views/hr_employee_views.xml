@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="hr.view_employee_form"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='hr_settings']" position="after">
-                <page name="field_attendance" string="Campo" groups="hr_attendance_field.group_field_operations">
+                <page name="field_attendance" string="Campo" groups="Remote_Attendance.group_field_operations">
                     <group>
                         <group string="Rol">
                             <field name="field_role"/>

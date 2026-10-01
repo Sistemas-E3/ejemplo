@@ -13,7 +13,7 @@
                         <field name="field_state" readonly="1"/>
                         <field name="field_review_reason" invisible="not field_review_reason"/>
                         <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"/>
-                        <div colspan="2" groups="hr_attendance_field.group_field_operations">
+                        <div colspan="2" groups="Remote_Attendance.group_field_operations">
                             <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"
                                     invisible="field_state not in ('review', 'rejected')"/>
                             <button name="action_field_reject" type="object" string="Rechazar" class="btn-secondary"
@@ -110,7 +110,7 @@
         </field>
     </record>
 
-    <record id="hr_attendance_field_review_action" model="ir.actions.act_window">
+    <record id="Remote_Attendance_review_action" model="ir.actions.act_window">
         <field name="name">Marcajes por revisar</field>
         <field name="res_model">hr.attendance</field>
         <field name="view_mode">list,form</field>

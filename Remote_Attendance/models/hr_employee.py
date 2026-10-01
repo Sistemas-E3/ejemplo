@@ -6,7 +6,7 @@ import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-OPS_GROUP = 'hr_attendance_field.group_field_operations'
+OPS_GROUP = 'Remote_Attendance.group_field_operations'
 PIN_MAX_FAILURES = 5
 PIN_LOCK_MINUTES = 15
 

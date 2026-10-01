@@ -43,7 +43,7 @@ class HrFieldService(models.AbstractModel):
 
     @api.model
     def _face_threshold(self):
-        value = self.env['ir.config_parameter'].sudo().get_param('hr_attendance_field.face_threshold')
+        value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.face_threshold')
         try:
             return float(value) if value else DEFAULT_FACE_THRESHOLD
         except ValueError:

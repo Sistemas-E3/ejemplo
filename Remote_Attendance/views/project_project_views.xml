@@ -6,7 +6,7 @@
         <field name="inherit_id" ref="project.edit_project"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='settings']" position="after">
-                <page name="field_attendance" string="Obra en campo" groups="hr_attendance_field.group_field_operations">
+                <page name="field_attendance" string="Obra en campo" groups="Remote_Attendance.group_field_operations">
                     <group>
                         <group string="Supervisores">
                             <field name="field_code"/>

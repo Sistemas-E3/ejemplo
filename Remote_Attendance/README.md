@@ -15,7 +15,7 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 3. **Trabajador** (sin usuario de Odoo): cuando el supervisor no está, marca desde su propio teléfono con su enlace;
    solo se reconoce su rostro y solo puede usar las obras activas de su supervisor.
 4. Cada marcaje:
-   - identifica a la persona comparando su huella facial en el servidor (umbral `hr_attendance_field.face_threshold`, 0.5 por defecto);
+   - identifica a la persona comparando su huella facial en el servidor (umbral `Remote_Attendance.face_threshold`, 0.5 por defecto);
    - si no la reconoce, permite marcar con PIN y queda **en revisión**;
    - si hay varias obras activas, sugiere la más cercana por GPS;
    - fuera del radio o sin GPS, queda **en revisión**;

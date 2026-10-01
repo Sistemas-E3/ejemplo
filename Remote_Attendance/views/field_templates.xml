@@ -5,17 +5,17 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
         <meta name="robots" content="noindex, nofollow"/>
         <meta name="theme-color" content="#1f2937"/>
-        <link rel="stylesheet" href="/hr_attendance_field/static/src/css/field_kiosk.css"/>
-        <script src="/hr_attendance_field/static/lib/face-api/face-api.js"></script>
-        <script src="/hr_attendance_field/static/src/js/field_common.js"></script>
+        <link rel="stylesheet" href="/Remote_Attendance/static/src/css/field_kiosk.css"/>
+        <script src="/Remote_Attendance/static/lib/face-api/face-api.js"></script>
+        <script src="/Remote_Attendance/static/src/js/field_common.js"></script>
     </template>
 
     <template id="field_kiosk_page" name="Asistencias en campo: kiosco">&lt;!DOCTYPE html&gt;
         <html lang="es">
             <head>
                 <title>Marcaje en campo</title>
-                <t t-call="hr_attendance_field.field_page_head"/>
-                <script src="/hr_attendance_field/static/src/js/field_kiosk.js" defer="defer"></script>
+                <t t-call="Remote_Attendance.field_page_head"/>
+                <script src="/Remote_Attendance/static/src/js/field_kiosk.js" defer="defer"></script>
             </head>
             <body>
                 <main id="app" class="fk" t-att-data-token="token" t-att-data-supervisor="'1' if is_supervisor else '0'">
@@ -109,8 +109,8 @@
         <html lang="es">
             <head>
                 <title>Registrar rostro</title>
-                <t t-call="hr_attendance_field.field_page_head"/>
-                <script src="/hr_attendance_field/static/src/js/field_enroll.js" defer="defer"></script>
+                <t t-call="Remote_Attendance.field_page_head"/>
+                <script src="/Remote_Attendance/static/src/js/field_enroll.js" defer="defer"></script>
             </head>
             <body>
                 <main id="app" class="fk" t-att-data-employee="employee.id" t-att-data-consent="'1' if has_consent else '0'">

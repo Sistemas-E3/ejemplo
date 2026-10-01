@@ -59,7 +59,7 @@ class FieldAttendance(http.Controller):
         owner = self._owner(token)
         if not owner:
             raise request.not_found()
-        return request.render('hr_attendance_field.field_kiosk_page', {
+        return request.render('Remote_Attendance.field_kiosk_page', {
             'token': token,
             'owner_name': owner.name,
             'is_supervisor': owner.field_role == 'supervisor',
@@ -132,7 +132,7 @@ class FieldAttendance(http.Controller):
     # ------------------------------------------------------------------
 
     def _enroll_employee(self, employee_id):
-        if not request.env.user.has_group('hr_attendance_field.group_field_operations'):
+        if not request.env.user.has_group('Remote_Attendance.group_field_operations'):
             raise AccessError(_("Solo Operaciones puede registrar rostros."))
         employee = request.env['hr.employee'].browse(int(employee_id)).exists()
         if not employee:
@@ -142,7 +142,7 @@ class FieldAttendance(http.Controller):
     @http.route('/campo/enrolar/<int:employee_id>', type='http', auth='user', sitemap=False)
     def enroll_page(self, employee_id):
         employee = self._enroll_employee(employee_id)
-        return request.render('hr_attendance_field.field_enroll_page', {
+        return request.render('Remote_Attendance.field_enroll_page', {
             'employee': employee,
             'has_consent': bool(employee.field_face_consent_date),
         })
