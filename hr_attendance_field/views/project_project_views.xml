@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="project_project_view_form_field" model="ir.ui.view">
+        <field name="name">project.project.form.field.attendance</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='settings']" position="after">
+                <page name="field_attendance" string="Obra en campo" groups="hr_attendance_field.group_field_operations">
+                    <group>
+                        <group string="Supervisores">
+                            <field name="field_code"/>
+                            <field name="field_supervisor_ids" widget="many2many_tags"/>
+                        </group>
+                        <group string="Ubicación">
+                            <field name="field_latitude"/>
+                            <field name="field_longitude"/>
+                            <field name="field_radius"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="project_project_view_list_field" model="ir.ui.view">
+        <field name="name">project.project.list.field.attendance</field>
+        <field name="model">project.project</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Obras" editable="bottom" create="false" delete="false">
+                <field name="field_code"/>
+                <field name="name" readonly="1"/>
+                <field name="field_supervisor_ids" widget="many2many_tags"/>
+                <field name="field_latitude"/>
+                <field name="field_longitude"/>
+                <field name="field_radius"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="project_project_field_action" model="ir.actions.act_window">
+        <field name="name">Obras</field>
+        <field name="res_model">project.project</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="project_project_view_list_field"/>
+        <field name="domain">[('is_template', '=', False)]</field>
+    </record>
+</odoo>

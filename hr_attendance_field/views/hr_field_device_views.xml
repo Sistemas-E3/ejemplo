@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_device_view_list" model="ir.ui.view">
+        <field name="name">hr.field.device.list</field>
+        <field name="model">hr.field.device</field>
+        <field name="arch" type="xml">
+            <list string="Teléfonos" create="false" decoration-warning="state == 'pending'" decoration-muted="state == 'revoked'">
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="name"/>
+                <field name="user_agent" optional="hide"/>
+                <field name="create_date" string="Solicitado el"/>
+                <field name="last_seen"/>
+                <field name="approved_by_id" optional="show"/>
+                <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-success="state == 'approved'" decoration-danger="state == 'revoked'"/>
+                <button name="action_approve" type="object" string="Aprobar" icon="fa-check" invisible="state == 'approved'"/>
+                <button name="action_revoke" type="object" string="Revocar" icon="fa-ban" invisible="state == 'revoked'"
+                        confirm="El teléfono dejará de poder marcar. ¿Continuar?"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_device_view_form" model="ir.ui.view">
+        <field name="name">hr.field.device.form</field>
+        <field name="model">hr.field.device</field>
+        <field name="arch" type="xml">
+            <form string="Teléfono" create="false">
+                <header>
+                    <button name="action_approve" type="object" string="Aprobar" class="btn-primary" invisible="state == 'approved'"/>
+                    <button name="action_revoke" type="object" string="Revocar" invisible="state == 'revoked'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="employee_id" readonly="1"/>
+                            <field name="name"/>
+                            <field name="user_agent"/>
+                        </group>
+                        <group>
+                            <field name="create_date" string="Solicitado el"/>
+                            <field name="last_seen"/>
+                            <field name="approved_by_id"/>
+                            <field name="approved_date"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_device_view_search" model="ir.ui.view">
+        <field name="name">hr.field.device.search</field>
+        <field name="model">hr.field.device</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <filter name="pending" string="Pendientes" domain="[('state', '=', 'pending')]"/>
+                <filter name="approved" string="Aprobados" domain="[('state', '=', 'approved')]"/>
+                <group>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_field_device_action" model="ir.actions.act_window">
+        <field name="name">Teléfonos</field>
+        <field name="res_model">hr.field.device</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No hay teléfonos por aprobar</p>
+            <p>Cuando alguien abre su enlace de marcaje por primera vez, su teléfono aparece aquí para que Operaciones lo apruebe.</p>
+        </field>
+    </record>
+</odoo>
