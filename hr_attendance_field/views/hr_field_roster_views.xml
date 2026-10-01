@@ -9,32 +9,46 @@
                 <group invisible="state != 'draft'">
                     <field name="date"/>
                     <field name="message" nolabel="1" colspan="2"
-                           placeholder="Pega aquí el mensaje del supervisor, por ejemplo:&#10;1234 Torre Norte&#10;Juan Pérez&#10;Pedro López"/>
+                           placeholder="Pega aquí el mensaje del supervisor, por ejemplo:&#10;PRESUPUESTO: 2316-26 _ES&#10;ACTIVIDAD: ...&#10;PERSONAL:&#10;Juan Pérez&#10;Pedro López 1/2 día"/>
                 </group>
                 <group invisible="state != 'preview'">
                     <group>
-                        <field name="project_id" required="state == 'preview'" options="{'no_create': True}"/>
                         <field name="supervisor_id" options="{'no_create': True}"/>
+                        <field name="date"/>
                     </group>
                     <group>
-                        <field name="date"/>
-                        <field name="unmatched_count" string="Sin identificar" invisible="not unmatched_count"/>
-                        <field name="conflict_count" string="Ya registrados" invisible="not conflict_count"/>
+                        <field name="unassigned_block_count" string="Obras sin proyecto" invisible="not unassigned_block_count"/>
+                        <field name="unmatched_count" string="Nombres sin identificar" invisible="not unmatched_count"/>
                     </group>
                 </group>
+                <field name="block_ids" invisible="state != 'preview'">
+                    <list editable="bottom" create="false" delete="false"
+                          decoration-danger="not project_id">
+                        <field name="title"/>
+                        <field name="project_id" options="{'no_create': True}"/>
+                        <field name="match" widget="badge"
+                               decoration-success="match in ('exact', 'alias')"
+                               decoration-danger="match == 'none'"/>
+                        <field name="people_count"/>
+                        <field name="suggested_project_id" column_invisible="1"/>
+                    </list>
+                </field>
                 <field name="line_ids" invisible="state != 'preview'">
                     <list editable="bottom" create="false" delete="false"
                           decoration-danger="include and not employee_id"
-                          decoration-warning="include and (match == 'fuzzy' or conflict)"
+                          decoration-warning="include and (match == 'fuzzy' or warning)"
                           decoration-muted="not include">
                         <field name="include" widget="boolean_toggle"/>
+                        <field name="block_id"/>
                         <field name="raw_name"/>
                         <field name="employee_id" options="{'no_create': True}"/>
+                        <field name="fraction"/>
+                        <field name="hours" widget="float_time" optional="hide"/>
                         <field name="match" widget="badge"
                                decoration-success="match in ('exact', 'alias')"
                                decoration-warning="match == 'fuzzy'"
                                decoration-danger="match == 'none'"/>
-                        <field name="conflict"/>
+                        <field name="warning"/>
                         <field name="suggested_employee_id" column_invisible="1"/>
                     </list>
                 </field>
@@ -65,6 +79,27 @@
                 <field name="name"/>
                 <field name="employee_id"/>
             </list>
+        </field>
+    </record>
+
+    <record id="hr_field_project_alias_view_list" model="ir.ui.view">
+        <field name="name">hr.field.project.alias.list</field>
+        <field name="model">hr.field.project.alias</field>
+        <field name="arch" type="xml">
+            <list string="Obras recordadas" editable="bottom">
+                <field name="name"/>
+                <field name="project_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_project_alias_action" model="ir.actions.act_window">
+        <field name="name">Obras y actividades recordadas</field>
+        <field name="res_model">hr.field.project.alias</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay obras recordadas</p>
+            <p>Cuando eliges el proyecto de un presupuesto o de una actividad como "taller" al cargar una lista, Odoo lo recuerda aquí.</p>
         </field>
     </record>
 

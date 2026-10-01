@@ -12,7 +12,7 @@
                         <field name="field_supervisor_id"/>
                         <field name="field_state" readonly="1"/>
                         <field name="field_review_reason" invisible="not field_review_reason"/>
-                        <field name="field_timesheet_id"/>
+                        <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"/>
                         <div colspan="2" groups="hr_attendance_field.group_field_operations">
                             <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"
                                     invisible="field_state not in ('review', 'rejected')"/>
@@ -28,6 +28,15 @@
                         <field name="in_field_device_id"/>
                         <field name="out_field_device_id"/>
                     </group>
+                    <field name="field_allocation_ids" colspan="2" invisible="not field_allocation_ids" readonly="1">
+                        <list>
+                            <field name="project_id"/>
+                            <field name="name"/>
+                            <field name="fraction"/>
+                            <field name="hours" widget="float_time"/>
+                            <field name="supervisor_id"/>
+                        </list>
+                    </field>
                     <group>
                         <field name="in_field_photo" widget="image" options="{'size': [180, 180]}" invisible="not in_field_photo"/>
                     </group>

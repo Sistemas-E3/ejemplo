@@ -5,3 +5,7 @@ access_project_project_field_ops,project.project operaciones de campo,project.mo
 access_hr_field_alias_ops,hr.field.alias operaciones,model_hr_field_alias,group_field_operations,1,1,1,1
 access_hr_field_roster_import_ops,hr.field.roster.import operaciones,model_hr_field_roster_import,group_field_operations,1,1,1,1
 access_hr_field_roster_line_ops,hr.field.roster.line operaciones,model_hr_field_roster_line,group_field_operations,1,1,1,1
+access_hr_field_allocation_ops,hr.field.allocation operaciones,model_hr_field_allocation,group_field_operations,1,1,1,1
+access_hr_field_allocation_att,hr.field.allocation asistencias,model_hr_field_allocation,hr_attendance.group_hr_attendance_officer,1,0,0,0
+access_hr_field_project_alias_ops,hr.field.project.alias operaciones,model_hr_field_project_alias,group_field_operations,1,1,1,1
+access_hr_field_roster_block_ops,hr.field.roster.block operaciones,model_hr_field_roster_block,group_field_operations,1,1,1,1

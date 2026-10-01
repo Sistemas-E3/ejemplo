@@ -25,16 +25,32 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 
 ## Cargar la lista de WhatsApp (sin fotos)
 
-Para seguir con la costumbre actual de los supervisores (mensaje con número y nombre de obra y la lista de gente):
+Sirve con el mensaje que ya mandan los supervisores al grupo, por ejemplo:
 
-1. Operaciones abre *Asistencias › Campo › Cargar lista de WhatsApp*, elige la fecha y pega el mensaje
+```
+PRESUPUESTO: 2316-26 _ES
+ACTIVIDAD : cuarto de Shirrock
+UBICACION: Danfoss
+PERSONAL :
+Efraín Salazar
+Jhonatan peña 1/2 día
+
+Curso hidro 1/2 día
+Jhonatan Peña
+```
+
+1. Operaciones abre *Asistencias › Campo › Cargar lista de WhatsApp*, elige supervisor y fecha y pega el mensaje
    (sirve con o sin la fecha y el nombre que agrega WhatsApp al copiar).
-2. Odoo reconoce la obra por su **Número de proyecto** (o por su nombre) y a cada persona entre todo el personal de
-   campo, incluida la gente prestada de otras cuadrillas. Marca en amarillo los nombres parecidos y en rojo los que no encontró.
-3. Al corregir un nombre, Odoo lo recuerda (*Nombres recordados*) y la próxima vez lo reconoce solo.
-4. **Registrar asistencia** crea la asistencia con la jornada del horario de cada empleado y su línea de horas en la obra.
-   Si la persona ya tiene asistencia ese día (por ejemplo, la pasó otro supervisor), no se duplica y se avisa.
-   Si la fecha es día no laborable según su horario, queda en revisión.
+2. Cada `PRESUPUESTO:` (o `PROYECTO:` / `OBRA:`) abre un bloque; la obra se reconoce por su **Número de proyecto**
+   (o el código analítico o el número dentro del nombre). Una línea suelta como `Curso hidro 1/2 día` o `taller 1/2 día`
+   también abre un bloque: la primera vez se elige a qué proyecto va y Odoo lo recuerda (*Obras recordadas*).
+3. `1/2 día`, `medio día` o `4 hrs` junto al bloque o al nombre indican la parte de la jornada.
+4. Las personas se buscan entre todo el personal de campo (incluida la gente prestada de otras cuadrillas).
+   Al corregir un nombre, Odoo lo recuerda (*Nombres recordados*).
+5. **Registrar asistencia** crea **una asistencia por persona y día** con la jornada de su horario y la reparte entre
+   las obras: por ejemplo 4 h en la 2316-26 y 4 h en el curso. Cada obra recibe su línea en la hoja de horas.
+   Si la persona ya marcó con el teléfono no se duplica; si se cargan más mensajes del mismo día se suman.
+   Si suma más de una jornada o es día no laborable, queda en revisión.
 
 ## Seguridad
 

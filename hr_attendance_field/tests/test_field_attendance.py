@@ -97,8 +97,8 @@ class TestFieldAttendance(TransactionCase):
 
         result = self._punch(self.sup_device, descriptor=vector(0.98))
         self.assertEqual(result['action'], 'check_out')
-        line = attendance.field_timesheet_id
-        self.assertTrue(line)
+        line = attendance.field_timesheet_ids
+        self.assertEqual(len(line), 1)
         self.assertEqual(line.project_id, self.project_a)
         self.assertEqual(line.employee_id, self.worker)
         self.assertAlmostEqual(line.unit_amount, attendance.worked_hours, places=2)
@@ -113,11 +113,11 @@ class TestFieldAttendance(TransactionCase):
         attendance = self.env['hr.attendance'].search([('employee_id', '=', self.worker.id)])
         attendance.check_in = fields.Datetime.now() - timedelta(hours=2)
         self._punch(self.sup_device, employee_id=self.worker.id, pin='5678')
-        self.assertFalse(attendance.field_timesheet_id, "Attendances in review do not create hours")
+        self.assertFalse(attendance.field_timesheet_ids, "Attendances in review do not create hours")
         attendance.action_field_approve()
-        self.assertTrue(attendance.field_timesheet_id)
+        self.assertTrue(attendance.field_timesheet_ids)
         attendance.action_field_reject()
-        self.assertFalse(attendance.field_timesheet_id)
+        self.assertFalse(attendance.field_timesheet_ids)
 
     def test_worker_cannot_use_pin_of_someone_outside_link(self):
         self._activate(self.project_a)
@@ -160,7 +160,7 @@ class TestFieldAttendance(TransactionCase):
         attendances = self.env['hr.attendance'].search([('employee_id', '=', self.worker.id)], order='check_in')
         self.assertEqual(len(attendances), 2)
         self.assertTrue(first.check_out)
-        self.assertEqual(first.field_timesheet_id.project_id, self.project_a)
+        self.assertEqual(first.field_timesheet_ids.project_id, self.project_a)
         self.assertEqual(attendances[-1].field_project_id, self.project_b)
 
     def test_no_active_projects(self):

@@ -14,4 +14,6 @@
               action="hr_field_device_action"/>
     <menuitem id="menu_field_alias" name="Nombres recordados" parent="menu_field_root" sequence="5"
               action="hr_field_alias_action"/>
+    <menuitem id="menu_field_project_alias" name="Obras recordadas" parent="menu_field_root" sequence="6"
+              action="hr_field_project_alias_action"/>
 </odoo>
