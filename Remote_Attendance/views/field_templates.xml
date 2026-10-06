@@ -18,7 +18,8 @@
                 <script src="/Remote_Attendance/static/src/js/field_kiosk.js" defer="defer"></script>
             </head>
             <body>
-                <main id="app" class="fk" t-att-data-token="token" t-att-data-supervisor="'1' if is_supervisor else '0'">
+                <main id="app" t-att-class="'fk fk-office' if role == 'office' else 'fk'" t-att-data-token="token"
+                      t-att-data-supervisor="'1' if is_supervisor else '0'" t-att-data-role="role">
                     <header class="fk-header">
                         <div>
                             <div class="fk-owner" t-esc="owner_name"/>
@@ -71,8 +72,16 @@
                             <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
                         </div>
                         <div class="fk-gps" id="gps-status">Buscando ubicación…</div>
-                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="btn-punch" disabled="disabled">Marcar entrada / salida</button>
+                        <div class="fk-kinds" id="punch-kinds">
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="in" disabled="disabled">Entrada</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="lunch_out" disabled="disabled">Salida a comer</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="lunch_in" disabled="disabled">Regreso de comer</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="out" disabled="disabled">Salida</button>
+                        </div>
+                        <div class="fk-office-result" id="office-result" hidden="hidden"></div>
                         <button type="button" class="fk-btn fk-btn-light" id="btn-change">Cambiar de obra</button>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-lunch" hidden="hidden">Registrar comida después</button>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-office-pin" hidden="hidden">Marcar con PIN</button>
                     </section>
 
                     <section id="panel-projects" class="fk-sheet" hidden="hidden">
@@ -97,6 +106,21 @@
                         <input type="password" inputmode="numeric" id="pin-code" class="fk-input" placeholder="PIN" autocomplete="off"/>
                         <button type="button" class="fk-btn fk-btn-primary" id="btn-pin">Marcar</button>
                         <button type="button" class="fk-btn fk-btn-light" data-close="panel-pin">Cancelar</button>
+                    </section>
+
+                    <section id="panel-lunch" class="fk-sheet" hidden="hidden">
+                        <h2>Registrar comida después</h2>
+                        <p>Para cuando no estuviste en la obra a la hora de la comida. Queda en revisión para RH.</p>
+                        <select id="lunch-employee" class="fk-input" aria-label="Persona"></select>
+                        <div class="fk-days" id="lunch-days"></div>
+                        <div class="fk-times">
+                            <label>Salió a comer<input type="time" id="lunch-out" class="fk-input" value="14:00"/></label>
+                            <label>Regresó<input type="time" id="lunch-in" class="fk-input" value="15:00"/></label>
+                        </div>
+                        <select id="lunch-project" class="fk-input" aria-label="Obra" hidden="hidden"></select>
+                        <input type="password" inputmode="numeric" id="lunch-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-lunch-save">Guardar comida</button>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-lunch">Cancelar</button>
                     </section>
 
                     <div id="toast" class="fk-toast" hidden="hidden"></div>

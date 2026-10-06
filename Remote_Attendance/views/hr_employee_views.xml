@@ -10,6 +10,7 @@
                     <group>
                         <group string="Rol">
                             <field name="field_role"/>
+                            <field name="barcode" string="Clave (ID de credencial)" invisible="field_role == 'office'"/>
                             <field name="field_supervisor_id" invisible="field_role != 'worker'"/>
                             <field name="field_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
                             <field name="field_active_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
@@ -44,6 +45,7 @@
                     </group>
                     <field name="field_crew_ids" invisible="field_role != 'supervisor'" readonly="1">
                         <list>
+                            <field name="barcode" string="Clave"/>
                             <field name="name"/>
                             <field name="job_title"/>
                             <field name="field_face_count"/>
@@ -70,6 +72,7 @@
         <field name="priority">100</field>
         <field name="arch" type="xml">
             <list string="Personal de campo">
+                <field name="barcode" string="Clave"/>
                 <field name="name"/>
                 <field name="field_role"/>
                 <field name="field_supervisor_id"/>
@@ -88,7 +91,7 @@
         <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_employee_view_list_field')})]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Aún no hay personal de campo</p>
-            <p>Abre la ficha de un empleado y en la pestaña Campo asígnale el rol de supervisor o trabajador.</p>
+            <p>Abre la ficha de un empleado y en la pestaña Campo asígnale el rol de supervisor o trabajador y su clave.</p>
         </field>
     </record>
 </odoo>

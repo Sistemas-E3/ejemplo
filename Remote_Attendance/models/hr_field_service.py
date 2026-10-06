@@ -1,6 +1,9 @@
 import base64
 import binascii
 import math
+from datetime import timedelta
+
+import pytz
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -9,6 +12,9 @@ from .hr_field_face import descriptor_distance, parse_descriptor
 
 DEFAULT_FACE_THRESHOLD = 0.5
 MAX_PHOTO_BYTES = 600 * 1024
+PUNCH_KINDS = ('in', 'lunch_out', 'lunch_in', 'out')
+# On the office tablet a second scan within this time is ignored (people stay in front of the camera).
+REPEAT_MINUTES = 30
 
 
 def gps_distance_m(lat1, lon1, lat2, lon2):
@@ -93,7 +99,10 @@ class HrFieldService(models.AbstractModel):
             'active_projects': self._project_payload(active),
             'assignable_projects': self._project_payload(owner.field_project_ids)
             if owner.field_role == 'supervisor' else [],
-            'crew': [{'id': e.id, 'name': e.name} for e in owner._field_candidates()],
+            'crew': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''}
+                     for e in owner._field_candidates().sorted('name')],
+            'days': [day.isoformat() for day in self._roll_days(owner)]
+            if owner.field_role == 'supervisor' else [],
         }
 
     @api.model
@@ -111,9 +120,14 @@ class HrFieldService(models.AbstractModel):
         return {'active_projects': self._project_payload(projects)}
 
     @api.model
-    def _identify(self, owner, descriptor=None, employee_id=None, pin=None):
+    def _identify(self, owner, descriptor=None, employee_id=None, pin=None, badge=None):
         """Return (employee, face_distance, review_reasons) or raise UserError."""
         candidates = owner._field_candidates()
+        if badge:
+            employee = self.env['hr.employee']._field_by_key(badge) & candidates
+            if not employee:
+                return self.env['hr.employee'], None, [_("Tarjeta no registrada: %s", badge)]
+            return employee, None, []
         if descriptor:
             employee, distance = self._match_face(descriptor, candidates)
             if employee:
@@ -128,55 +142,98 @@ class HrFieldService(models.AbstractModel):
         return self.env['hr.employee'], None, []
 
     @api.model
+    def _local_time(self, employee, value):
+        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        return pytz.utc.localize(value).astimezone(tz).strftime('%H:%M')
+
+    @api.model
+    def _open_attendance(self, employee):
+        """Open attendance of today. One left open on a previous day is closed for HR to fix."""
+        attendance = self.env['hr.attendance'].search(
+            [('employee_id', '=', employee.id), ('check_out', '=', False)], limit=1)
+        if attendance and attendance.field_date and attendance.field_date < employee._field_today():
+            attendance.write({'check_out': attendance.check_in, 'field_state': 'review'})
+            attendance._field_add_review_reason(_("Sin salida registrada: captura la hora de salida"))
+            return self.env['hr.attendance']
+        return attendance
+
+    @api.model
+    def _pick_project(self, leader, project_id):
+        """Return (project, error dict) among the leader's active projects."""
+        projects = leader._field_active_projects() if leader else self.env['project.project']
+        if not projects:
+            return projects, {'error': _("Tu supervisor no tiene obras activas hoy.")}
+        if project_id:
+            project = projects.filtered(lambda p: p.id == int(project_id))
+            if not project:
+                return project, {'error': _("Esa obra no está activa para tu supervisor.")}
+            return project, None
+        if len(projects) == 1:
+            return projects, None
+        return projects.browse(), {'error': _("Elige la obra."), 'need_project': True}
+
+    @api.model
     def _geo(self, latitude, longitude, device):
         from odoo.addons.hr_attendance.controllers.main import HrAttendance as AttendanceController
         from odoo.http import request
         geo = {'mode': 'kiosk'}
         if request:
-            geo = AttendanceController._get_geoip_response(
-                'kiosk', latitude=latitude, longitude=longitude,
-                device_tracking_enabled=device.employee_id.company_id.attendance_device_tracking)
+            geo = AttendanceController._get_geoip_response('kiosk', latitude=latitude, longitude=longitude)
         if latitude and longitude:
             geo.update(latitude=latitude, longitude=longitude)
         return geo
 
     @api.model
     def _punch(self, owner, device, descriptor=None, employee_id=None, pin=None,
-               project_id=None, latitude=None, longitude=None, photo=None, change_project=False):
-        """Check in or out the recognised employee.
+               project_id=None, latitude=None, longitude=None, photo=None, change_project=False,
+               kind=None, badge=None):
+        """Mark the recognised employee.
 
+        ``kind`` is the button the supervisor pressed: ``in`` (entrada en obra), ``lunch_out``,
+        ``lunch_in`` or ``out``; without it, it toggles entrance/exit.
         Returns a dict for the kiosk: ``error`` or ``employee``, ``action``,
         ``project``, ``state`` and ``reasons``."""
-        employee, face_distance, reasons = self._identify(owner, descriptor, employee_id, pin)
+        if kind and kind not in PUNCH_KINDS:
+            raise UserError(_("Tipo de marcaje inválido."))
+        employee, face_distance, reasons = self._identify(owner, descriptor, employee_id, pin, badge)
         if not employee:
             if reasons:
                 return {'error': reasons[0]}
             return {'error': _("No te reconocí. Intenta de nuevo o marca con tu PIN."), 'need_pin': True}
+        photo = clean_photo(photo)
+        if owner.field_role == 'office':
+            return self._punch_office(employee, device, face_distance, photo, reasons)
 
         has_gps = latitude is not None and longitude is not None
         latitude = float(latitude) if has_gps else False
         longitude = float(longitude) if has_gps else False
-        photo = clean_photo(photo)
         geo = self._geo(latitude, longitude, device)
-        attendance = self.env['hr.attendance'].search(
-            [('employee_id', '=', employee.id), ('check_out', '=', False)], limit=1)
+        attendance = self._open_attendance(employee)
+        # Hours go to the site of whoever marks: on a supervisor's phone, his active projects.
+        leader = owner if owner.field_role == 'supervisor' else employee._field_leader()
 
+        if kind in ('in', 'lunch_in') and attendance:
+            return {'error': _("%(name)s ya tiene entrada desde las %(time)s. Marca primero su salida.",
+                               name=employee.name, time=self._local_time(employee, attendance.check_in))}
+        if kind in ('lunch_out', 'out') and not attendance:
+            return {'error': _("%s no tiene entrada abierta hoy.", employee.name)}
         if attendance and not change_project:
-            return self._check_out(attendance, device, geo, face_distance, photo, reasons, has_gps)
+            if not attendance.field_project_id:
+                # Entered at the office: the hours go to the site where they mark the exit.
+                project, error = self._pick_project(leader, project_id)
+                if error:
+                    return error
+                attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
+            return self._check_out(attendance, device, geo, face_distance, photo, reasons, has_gps,
+                                   out_kind='lunch' if kind == 'lunch_out' else 'day')
 
-        leader = employee._field_leader()
-        projects = leader._field_active_projects() if leader else self.env['project.project']
-        if not projects:
-            return {'error': _("Tu supervisor no tiene obras activas hoy.")}
-        if project_id:
-            project = projects.filtered(lambda p: p.id == int(project_id))
-            if not project:
-                return {'error': _("Esa obra no está activa para tu supervisor.")}
-        elif len(projects) == 1:
-            project = projects
-        else:
-            return {'error': _("Elige la obra."), 'need_project': True}
-
+        project, error = self._pick_project(leader, project_id)
+        if error:
+            return error
+        if attendance and not attendance.field_project_id:
+            attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
+            return {'employee': employee.name, 'action': 'project', 'project': project.display_name,
+                    'state': attendance.field_state, 'reasons': []}
         if attendance:
             if attendance.field_project_id == project:
                 return {'error': _("Ya estás registrado en esa obra.")}
@@ -191,6 +248,7 @@ class HrFieldService(models.AbstractModel):
             'check_in': fields.Datetime.now(),
             'field_project_id': project.id,
             'field_supervisor_id': leader.id,
+            'field_in_kind': 'lunch' if kind == 'lunch_in' else 'site',
             'field_state': 'review' if in_reasons else 'valid',
             'field_review_reason': '\n'.join(in_reasons) or False,
             'in_field_device_id': device.id,
@@ -202,10 +260,50 @@ class HrFieldService(models.AbstractModel):
         self.env['hr.attendance'].create(vals)
         return {
             'employee': employee.name,
-            'action': 'check_in',
+            'action': 'lunch_in' if kind == 'lunch_in' else 'check_in',
             'project': project.display_name,
             'state': vals['field_state'],
             'reasons': in_reasons,
+        }
+
+    @api.model
+    def _punch_office(self, employee, device, face_distance, photo, reasons):
+        """Office tablet: entrance without project (the site is set when they mark at the site)."""
+        geo = self._geo(False, False, device)
+        attendance = self._open_attendance(employee)
+        now = fields.Datetime.now()
+        if attendance:
+            if now - attendance.check_in < timedelta(minutes=REPEAT_MINUTES):
+                return {
+                    'employee': employee.name,
+                    'action': 'repeat',
+                    'time': self._local_time(employee, attendance.check_in),
+                    'project': '',
+                    'state': attendance.field_state,
+                    'reasons': [],
+                }
+            return self._check_out(attendance, device, geo, face_distance, photo, reasons, True,
+                                   check_geofence=False, out_kind='day')
+        vals = {
+            'employee_id': employee.id,
+            'check_in': now,
+            'field_supervisor_id': employee._field_leader().id,
+            'field_in_kind': 'office',
+            'field_state': 'review' if reasons else 'valid',
+            'field_review_reason': '\n'.join(reasons) or False,
+            'in_field_device_id': device.id,
+            'in_field_photo': photo,
+            'in_face_distance': face_distance or 0.0,
+            **{f'in_{key}': value for key, value in geo.items()},
+        }
+        self.env['hr.attendance'].create(vals)
+        return {
+            'employee': employee.name,
+            'action': 'check_in',
+            'time': self._local_time(employee, now),
+            'project': '',
+            'state': vals['field_state'],
+            'reasons': reasons,
         }
 
     @api.model
@@ -221,13 +319,15 @@ class HrFieldService(models.AbstractModel):
         return distance
 
     @api.model
-    def _check_out(self, attendance, device, geo, face_distance, photo, reasons, has_gps, check_geofence=True):
+    def _check_out(self, attendance, device, geo, face_distance, photo, reasons, has_gps, check_geofence=True,
+                   out_kind='day'):
         gps_distance = 0
         if attendance.field_project_id and check_geofence:
             gps_distance = self._gps_check(
                 attendance.field_project_id, geo.get('latitude'), geo.get('longitude'), has_gps, reasons)
         vals = {
             'check_out': fields.Datetime.now(),
+            'field_out_kind': out_kind,
             'out_field_device_id': device.id,
             'out_field_photo': photo,
             'out_face_distance': face_distance or 0.0,
@@ -242,7 +342,7 @@ class HrFieldService(models.AbstractModel):
                 attendance._field_add_review_reason(reason)
         return {
             'employee': attendance.employee_id.name,
-            'action': 'check_out',
+            'action': 'lunch_out' if out_kind == 'lunch' else 'check_out',
             'project': attendance.field_project_id.display_name or '',
             'state': attendance.field_state,
             'reasons': reasons,

@@ -8,7 +8,8 @@ FIELD_STATES = [
     ('approved', "Aprobada"),
     ('rejected', "Rechazada"),
 ]
-SYNC_FIELDS = {'check_in', 'check_out', 'field_project_id', 'field_state', 'employee_id', 'field_allocation_ids'}
+SYNC_FIELDS = {'check_in', 'check_out', 'field_project_id', 'field_state', 'employee_id', 'field_allocation_ids',
+               'field_in_kind', 'field_out_kind'}
 
 
 class HrAttendance(models.Model):
@@ -19,6 +20,15 @@ class HrAttendance(models.Model):
     field_supervisor_id = fields.Many2one('hr.employee', string="Supervisor", readonly=True)
     field_state = fields.Selection(FIELD_STATES, string="Estado en campo", tracking=True, index=True)
     field_review_reason = fields.Text("Motivo de revisión", readonly=True)
+    field_in_kind = fields.Selection([
+        ('office', "Entrada en oficina"),
+        ('site', "Entrada en obra"),
+        ('lunch', "Regreso de comer"),
+    ], string="Tipo de entrada", readonly=True)
+    field_out_kind = fields.Selection([
+        ('lunch', "Salida a comer"),
+        ('day', "Salida"),
+    ], string="Tipo de salida", readonly=True)
     field_date = fields.Date("Día", compute='_compute_field_date', store=True, index=True,
                              help="Día de la entrada en la zona horaria del empleado.")
     in_field_device_id = fields.Many2one('hr.field.device', string="Teléfono de entrada", readonly=True)
@@ -93,6 +103,9 @@ class HrAttendance(models.Model):
                 wanted[allocation.project_id] = wanted.get(allocation.project_id, 0.0) + allocation.hours
             return wanted
         if self.field_project_id:
+            if self.field_in_kind == 'lunch' or self.field_out_kind == 'lunch':
+                # The lunch was marked: Odoo would also deduct the schedule's lunch break.
+                return {self.field_project_id: (self.check_out - self.check_in).total_seconds() / 3600}
             return {self.field_project_id: self.worked_hours}
         return {}
 

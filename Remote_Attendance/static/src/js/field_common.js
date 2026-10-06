@@ -21,13 +21,30 @@
         return payload.result;
     }
 
+    async function chooseBackend() {
+        // The bundle prefers the WASM backend, whose files are not shipped: use the phone's GPU
+        // (WebGL) and fall back to the CPU, which is slower but works everywhere.
+        for (const name of ["webgl", "cpu"]) {
+            try {
+                if (await faceapi.tf.setBackend(name)) {
+                    await faceapi.tf.ready();
+                    return name;
+                }
+            } catch {
+                // try the next one
+            }
+        }
+        throw new Error("Este navegador no puede hacer el reconocimiento facial");
+    }
+
     function loadModels() {
         if (!modelsPromise) {
-            modelsPromise = Promise.all([
+            modelsPromise = chooseBackend().then(() => Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                 faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-            ]);
+            ]));
+            modelsPromise.catch(() => (modelsPromise = null));
         }
         return modelsPromise;
     }

@@ -63,6 +63,7 @@ class FieldAttendance(http.Controller):
             'token': token,
             'owner_name': owner.name,
             'is_supervisor': owner.field_role == 'supervisor',
+            'role': owner.field_role,
         })
 
     @http.route('/campo/<string:token>/register', type='json', auth='public')
@@ -100,7 +101,8 @@ class FieldAttendance(http.Controller):
 
     @http.route('/campo/<string:token>/punch', type='json', auth='public')
     def punch(self, token, device_key=None, descriptor=None, employee_id=None, pin=None,
-              project_id=None, latitude=None, longitude=None, photo=None, change_project=False):
+              project_id=None, latitude=None, longitude=None, photo=None, change_project=False,
+              kind=None, badge=None):
         owner = self._owner(token)
         device = owner and self._approved_device(owner, device_key)
         if not device:
@@ -109,7 +111,18 @@ class FieldAttendance(http.Controller):
             self._service()._punch, owner, device,
             descriptor=descriptor, employee_id=employee_id, pin=pin, project_id=project_id,
             latitude=latitude, longitude=longitude, photo=photo, change_project=bool(change_project),
+            kind=kind or None, badge=(str(badge).strip()[:32] or None) if badge else None,
         )
+
+    @http.route('/campo/<string:token>/comida', type='json', auth='public')
+    def late_lunch(self, token, device_key=None, pin=None, employee_id=None, date=None,
+                   lunch_out=None, lunch_in=None, project_id=None):
+        owner = self._owner(token)
+        device = owner and self._approved_device(owner, device_key)
+        if not device:
+            return {'error': _("Teléfono no autorizado.")}
+        return self._safe(self._service()._late_lunch, owner, pin, employee_id, self._parse_date(date),
+                          lunch_out, lunch_in, project_id)
 
     @http.route('/campo/<string:token>/lista', type='json', auth='public', readonly=True)
     def roll_state(self, token, device_key=None, date=None):

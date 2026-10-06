@@ -10,6 +10,8 @@
                     <group>
                         <field name="field_project_id"/>
                         <field name="field_supervisor_id"/>
+                        <field name="field_in_kind" invisible="not field_in_kind"/>
+                        <field name="field_out_kind" invisible="not field_out_kind"/>
                         <field name="field_state" readonly="1"/>
                         <field name="field_review_reason" invisible="not field_review_reason"/>
                         <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"/>
@@ -78,7 +80,9 @@
                 <field name="field_project_id"/>
                 <field name="field_supervisor_id" optional="show"/>
                 <field name="check_in"/>
+                <field name="field_in_kind" optional="show"/>
                 <field name="check_out"/>
+                <field name="field_out_kind" optional="show"/>
                 <field name="worked_hours" widget="float_time"/>
                 <field name="in_gps_distance" optional="show"/>
                 <field name="field_review_reason" optional="show"/>
@@ -120,7 +124,7 @@
         <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
-            <p>Aquí aparecen los marcajes fuera de obra, sin GPS o hechos con PIN.</p>
+            <p>Aquí aparecen los marcajes fuera de obra, sin GPS, hechos con PIN o con la comida registrada después.</p>
         </field>
     </record>
 </odoo>

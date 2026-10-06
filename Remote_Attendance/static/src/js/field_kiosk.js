@@ -8,6 +8,14 @@
     const base = "/campo/" + encodeURIComponent(token);
     const storageKey = "field_attendance_device_" + token;
     const $ = (id) => document.getElementById(id);
+    const isOffice = app.dataset.role === "office";
+    const ACTIONS = {
+        check_in: "Entrada",
+        check_out: "Salida",
+        lunch_out: "Salida a comer",
+        lunch_in: "Regreso de comer",
+        project: "Obra asignada",
+    };
 
     let deviceKey = null;
     let state = null;
@@ -45,7 +53,17 @@
         $(id).hidden = true;
     }
 
+    function personLabel(person) {
+        return (person.key ? person.key + " · " : "") + person.name;
+    }
+
     function renderActive() {
+        if (isOffice) {
+            $("active-projects").textContent = "Entrada en oficina: ponte frente a la cámara o pasa tu tarjeta";
+            $("btn-projects").hidden = true;
+            $("btn-change").hidden = true;
+            return;
+        }
         const names = (state.active_projects || []).map((p) => p.name);
         if (names.length) {
             $("active-projects").textContent = "Obras de hoy: " + names.join(", ");
@@ -56,6 +74,7 @@
         }
         $("btn-projects").hidden = state.role !== "supervisor";
         $("btn-change").hidden = (state.active_projects || []).length < 2;
+        $("btn-lunch").hidden = state.role !== "supervisor";
     }
 
     async function refresh() {
@@ -82,6 +101,7 @@
         }
         state = result;
         if (state.role === "supervisor") {
+            $("btn-lunch").hidden = false;
             setMode(mode);
         } else {
             show("screen-kiosk");
@@ -176,12 +196,12 @@
         const registered = roll.registered[$("roll-project").value] || [];
         const byId = new Map(registered.map((r) => [r.employee_id, r.fraction]));
         people = roll.crew.map((e) => ({
-            id: e.id, name: e.name, extra: false, checked: byId.has(e.id), fraction: byId.get(e.id) || 1,
+            id: e.id, name: e.name, key: e.key, extra: false, checked: byId.has(e.id), fraction: byId.get(e.id) || 1,
         }));
         for (const r of registered) {
             const other = roll.others.find((e) => e.id === r.employee_id);
             if (other && !people.some((p) => p.id === other.id)) {
-                people.push({ id: other.id, name: other.name, extra: true, checked: true, fraction: r.fraction });
+                people.push({ id: other.id, name: other.name, key: other.key, extra: true, checked: true, fraction: r.fraction });
             }
         }
         const saved = $("roll-saved");
@@ -208,7 +228,7 @@
             input.type = "checkbox";
             input.checked = person.checked;
             const name = document.createElement("span");
-            name.textContent = person.name;
+            name.textContent = personLabel(person);
             const notes = [];
             if (person.extra) {
                 notes.push("otra cuadrilla");
@@ -249,24 +269,24 @@
         const query = plain($("roll-search").value.trim());
         const box = $("roll-results");
         box.replaceChildren();
-        if (query.length < 2) {
+        if (query.length < 2 && !/^\d+$/.test(query)) {
             return;
         }
         const taken = new Set(people.map((p) => p.id));
         const words = query.split(/\s+/);
         const matches = roll.others
-            .filter((e) => !taken.has(e.id) && words.every((w) => plain(e.name).includes(w)))
+            .filter((e) => !taken.has(e.id) && words.every((w) => plain(personLabel(e)).includes(w)))
             .slice(0, 6);
         if (!matches.length) {
-            box.textContent = "No se encontró a nadie con ese nombre.";
+            box.textContent = "No se encontró a nadie con ese nombre o clave.";
         }
         for (const employee of matches) {
             const button = document.createElement("button");
             button.type = "button";
             button.className = "fk-btn fk-result";
-            button.textContent = "+ " + employee.name;
+            button.textContent = "+ " + personLabel(employee);
             button.addEventListener("click", () => {
-                people.push({ id: employee.id, name: employee.name, extra: true, checked: true, fraction: 1 });
+                people.push({ id: employee.id, name: employee.name, key: employee.key, extra: true, checked: true, fraction: 1 });
                 $("roll-search").value = "";
                 box.replaceChildren();
                 renderPeople();
@@ -332,13 +352,24 @@
             return;
         }
         kioskStarted = true;
-        watchGps();
+        if (isOffice) {
+            $("gps-status").hidden = true;
+            $("punch-kinds").hidden = true;
+            $("btn-office-pin").hidden = false;
+            listenBadge();
+        } else {
+            watchGps();
+        }
         try {
             await startCamera($("video"));
             $("camera-hint").textContent = "Cargando reconocimiento facial…";
             await loadModels();
-            $("camera-hint").textContent = "Ponte frente a la cámara y toca Marcar";
-            $("btn-punch").disabled = false;
+            setPunchEnabled(true);
+            if (isOffice) {
+                startOfficeLoop();
+            } else {
+                $("camera-hint").textContent = "Ponte frente a la cámara y toca lo que vas a marcar";
+            }
         } catch (error) {
             $("camera-hint").textContent = "No se pudo abrir la cámara: " + error.message;
         }
@@ -388,29 +419,39 @@
             chooseProject();
             return;
         }
-        if (result.need_pin) {
+        if (result.need_pin && !isOffice) {
             askPin();
             return;
         }
         pending = null;
+        if (isOffice) {
+            showOfficeResult(result);
+            return;
+        }
         if (result.error) {
             toast(result.error, "error", 6000);
             return;
         }
-        const verb = result.action === "check_in" ? "Entrada" : "Salida";
-        let message = verb + " registrada: " + result.employee + (result.project ? " · " + result.project : "");
+        const verb = ACTIONS[result.action] || "Marcaje";
+        let message = verb + ": " + result.employee + (result.project ? " · " + result.project : "");
         if (result.state === "review") {
             message += " (en revisión: " + (result.reasons || []).join(", ") + ")";
         }
         toast(message, result.state === "review" ? "warning" : "success", 6000);
     }
 
-    async function punch(changeProject) {
+    function setPunchEnabled(enabled) {
+        for (const button of document.querySelectorAll("#punch-kinds [data-kind]")) {
+            button.disabled = !enabled;
+        }
+    }
+
+    async function punch(kind, changeProject) {
         if (busy) {
             return;
         }
         busy = true;
-        $("btn-punch").disabled = true;
+        setPunchEnabled(false);
         $("camera-hint").textContent = "Reconociendo…";
         try {
             const descriptor = await detect($("video"), 4);
@@ -422,6 +463,7 @@
                 latitude: position ? position.latitude : null,
                 longitude: position ? position.longitude : null,
                 change_project: !!changeProject,
+                kind: kind || null,
             };
             if (!descriptor) {
                 askPin();
@@ -432,8 +474,164 @@
             toast(error.message, "error", 6000);
         } finally {
             busy = false;
-            $("btn-punch").disabled = false;
-            $("camera-hint").textContent = "Ponte frente a la cámara y toca Marcar";
+            setPunchEnabled(true);
+            $("camera-hint").textContent = "Ponte frente a la cámara y toca lo que vas a marcar";
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Kiosco de oficina: reconoce solo, sin tocar la pantalla, y acepta tarjeta
+    // ------------------------------------------------------------------
+
+    let officePauseUntil = 0;
+    let officeTimer = null;
+
+    function showOfficeResult(result) {
+        const box = $("office-result");
+        box.replaceChildren();
+        const title = document.createElement("div");
+        const detail = document.createElement("small");
+        if (result.error) {
+            box.className = "fk-office-result bad";
+            title.textContent = result.error;
+            detail.textContent = result.need_pin ? "Acércate a la cámara o usa «Marcar con PIN»" : "";
+        } else if (result.action === "repeat") {
+            box.className = "fk-office-result ok";
+            title.textContent = result.employee;
+            detail.textContent = "Ya tenías entrada a las " + result.time;
+        } else {
+            box.className = "fk-office-result " + (result.state === "review" ? "warn" : "ok");
+            title.textContent = result.employee;
+            detail.textContent = (ACTIONS[result.action] || "Marcaje") + (result.time ? " " + result.time : "")
+                + (result.state === "review" ? " · en revisión" : "");
+        }
+        box.append(title, detail);
+        box.hidden = false;
+        officePauseUntil = Date.now() + (result.error ? 2500 : 3000);
+        clearTimeout(officeTimer);
+        officeTimer = setTimeout(() => (box.hidden = true), 3500);
+    }
+
+    function startOfficeLoop() {
+        $("camera-hint").textContent = "Mira a la cámara";
+        const tick = async () => {
+            if (!busy && Date.now() >= officePauseUntil && $("panel-pin").hidden) {
+                busy = true;
+                try {
+                    const descriptor = await detect($("video"), 1);
+                    if (descriptor) {
+                        $("camera-hint").textContent = "Reconociendo…";
+                        pending = { device_key: deviceKey, descriptor: descriptor, photo: snapshot($("video"), $("canvas")) };
+                        await send();
+                    }
+                } catch (error) {
+                    showOfficeResult({ error: error.message });
+                } finally {
+                    busy = false;
+                    $("camera-hint").textContent = "Mira a la cámara";
+                }
+            }
+            setTimeout(tick, 400);
+        };
+        tick();
+    }
+
+    function listenBadge() {
+        // A card reader types the number like a keyboard and ends with Enter.
+        let buffer = "";
+        let last = 0;
+        document.addEventListener("keydown", async (event) => {
+            if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) {
+                return;
+            }
+            const now = Date.now();
+            if (now - last > 300) {
+                buffer = "";
+            }
+            last = now;
+            if (event.key === "Enter") {
+                const badge = buffer.trim();
+                buffer = "";
+                if (badge.length >= 3) {
+                    pending = { device_key: deviceKey, badge: badge };
+                    try {
+                        await send();
+                    } catch (error) {
+                        showOfficeResult({ error: error.message });
+                    }
+                }
+            } else if (event.key.length === 1) {
+                buffer += event.key;
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------
+    // Comida registrada después (supervisor en otra obra a la hora de comer)
+    // ------------------------------------------------------------------
+
+    let lunchDay = null;
+
+    function openLunch() {
+        const select = $("lunch-employee");
+        select.replaceChildren();
+        const crewIds = new Set();
+        for (const person of state.crew || []) {
+            crewIds.add(person.id);
+            const option = document.createElement("option");
+            option.value = person.id;
+            option.textContent = personLabel(person);
+            select.appendChild(option);
+        }
+        const days = $("lunch-days");
+        days.replaceChildren();
+        lunchDay = (state.days || [])[0];
+        (state.days || []).forEach((day, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = dayLabel(day, index);
+            button.className = "fk-btn " + (index === 0 ? "fk-btn-selected" : "fk-btn-light");
+            button.addEventListener("click", () => {
+                lunchDay = day;
+                for (const other of days.children) {
+                    other.className = "fk-btn " + (other === button ? "fk-btn-selected" : "fk-btn-light");
+                }
+            });
+            days.appendChild(button);
+        });
+        const projects = $("lunch-project");
+        projects.replaceChildren();
+        for (const project of state.active_projects || []) {
+            const option = document.createElement("option");
+            option.value = project.id;
+            option.textContent = project.name;
+            projects.appendChild(option);
+        }
+        projects.hidden = (state.active_projects || []).length < 2;
+        $("lunch-pin").value = "";
+        openPanel("panel-lunch");
+    }
+
+    async function saveLunch() {
+        try {
+            const result = await rpc(base + "/comida", {
+                device_key: deviceKey,
+                pin: $("lunch-pin").value,
+                employee_id: Number($("lunch-employee").value),
+                date: lunchDay,
+                lunch_out: $("lunch-out").value,
+                lunch_in: $("lunch-in").value,
+                project_id: Number($("lunch-project").value) || null,
+            });
+            if (result.error) {
+                toast(result.error, "error", 6000);
+                return;
+            }
+            closePanel("panel-lunch");
+            toast("Comida de " + result.employee + " de " + result.lunch_out + " a " + result.lunch_in
+                + " guardada; RH la revisará.", "success", 7000);
+        } catch (error) {
+            toast(error.message, "error", 6000);
         }
     }
 
@@ -465,7 +663,7 @@
         for (const person of state.crew || []) {
             const option = document.createElement("option");
             option.value = person.id;
-            option.textContent = person.name;
+            option.textContent = personLabel(person);
             select.appendChild(option);
         }
         $("pin-code").value = "";
@@ -543,8 +741,16 @@
         renderPeople();
     });
     $("btn-refresh").addEventListener("click", () => refresh().catch((e) => toast(e.message, "error")));
-    $("btn-punch").addEventListener("click", () => punch(false));
-    $("btn-change").addEventListener("click", () => punch(true));
+    for (const button of document.querySelectorAll("#punch-kinds [data-kind]")) {
+        button.addEventListener("click", () => punch(button.dataset.kind, false));
+    }
+    $("btn-change").addEventListener("click", () => punch(null, true));
+    $("btn-lunch").addEventListener("click", openLunch);
+    $("btn-lunch-save").addEventListener("click", saveLunch);
+    $("btn-office-pin").addEventListener("click", () => {
+        pending = { device_key: deviceKey };
+        askPin();
+    });
     $("btn-projects").addEventListener("click", openProjects);
     $("btn-activate").addEventListener("click", activate);
     $("btn-pin").addEventListener("click", async () => {

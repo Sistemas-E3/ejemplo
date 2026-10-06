@@ -4,10 +4,15 @@ import unicodedata
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .hr_employee import compact_key
+
 # "[29/09/26, 8:15] Juan: texto" (iOS) o "29/09/26, 8:15 - Juan: texto" (Android)
 WHATSAPP_PREFIX = re.compile(
     r'^\s*(\[[^\]]*\]\s*[^:]{1,60}:\s*|\d{1,2}/\d{1,2}/\d{2,4},?\s+\d{1,2}:\d{2}[^-]*-\s*[^:]{1,60}:\s*)')
-BULLET = re.compile(r'^\s*([-*•·>]+|\d{1,3}\s*[.)\-]+|\d{1,3}\s+(?=\D))\s*')
+# "1. Juan", "2) Pedro", "3 Luis". A bare number is a bullet only with 1-2 digits:
+# longer numbers are employee keys ("1042 Juan").
+BULLET = re.compile(r'^\s*([-*•·>]+|\d{1,3}\s*[.)]+|\d{1,3}\s*-(?!\d)|\d{1,2}\s+(?=\D))\s*')
+EMPLOYEE_KEY = re.compile(r'^[A-Za-z]{0,3}-?\d{3,8}$')
 KEY_LINE = re.compile(
     r'^\s*(presupuesto|proyecto|obra|actividad|ubicacion|personal)\s*[:.\-]?\s*(.*)$', re.IGNORECASE)
 FRACTION = re.compile(
@@ -84,7 +89,8 @@ def parse_message(message):
 
     def add_person(block, text):
         name, fraction, hours = split_amount(text)
-        if name and not is_header(name) and re.search(r'[A-Za-zÁÉÍÓÚÑáéíóúñ]', name):
+        has_letters = re.search(r'[A-Za-zÁÉÍÓÚÑáéíóúñ]', name)
+        if name and (EMPLOYEE_KEY.match(name) or (not is_header(name) and has_letters)):
             block['people'].append((name, fraction, hours))
 
     blocks, block = [], None
@@ -263,11 +269,15 @@ class HrFieldRosterImport(models.TransientModel):
 
     @api.model
     def _field_staff(self):
-        return self.env['hr.employee'].search([('field_role', '!=', False)])
+        return self.env['hr.employee']._field_staff()
 
     @api.model
-    def _match_employee(self, raw, staff, staff_names):
-        """Return (employee, match kind)."""
+    def _match_employee(self, raw, staff, staff_names, staff_keys=None):
+        """Return (employee, match kind). The employee key ("ID de credencial") wins over the name."""
+        for token in raw.split():
+            employee = (staff_keys or {}).get(compact_key(token))
+            if employee:
+                return employee, 'key'
         text = normalize(raw)
         alias = self.env['hr.field.alias'].search([('name', '=', text)], limit=1)
         if alias:
@@ -295,6 +305,7 @@ class HrFieldRosterImport(models.TransientModel):
         blocks = parse_message(self.message)
         staff = self._field_staff()
         staff_names = {e.id: normalize(e.name) for e in staff}
+        staff_keys = staff._field_keys()
         block_cmds, total_people = [], 0
         for sequence, block in enumerate(blocks):
             project, match, key, title = self._resolve_block(block)
@@ -310,7 +321,7 @@ class HrFieldRosterImport(models.TransientModel):
                     project, match, key, title = self.env['project.project'], 'none', '', _("Sin obra")
             seen, line_cmds = set(), []
             for raw, fraction, hours in people:
-                employee, emp_match = self._match_employee(raw, staff, staff_names)
+                employee, emp_match = self._match_employee(raw, staff, staff_names, staff_keys)
                 duplicate = bool(employee) and employee.id in seen
                 if employee:
                     seen.add(employee.id)
@@ -364,7 +375,7 @@ class HrFieldRosterImport(models.TransientModel):
     def _learn_aliases(self, lines):
         Alias = self.env['hr.field.alias']
         for line in lines:
-            if line.match == 'exact' and line.employee_id == line.suggested_employee_id:
+            if line.match in ('exact', 'key') and line.employee_id == line.suggested_employee_id:
                 continue
             key = normalize(line.raw_name)
             if not key or normalize(line.employee_id.name) == key:
@@ -465,6 +476,7 @@ class HrFieldRosterLine(models.TransientModel):
     fraction = fields.Float("Jornada", digits=(4, 2), default=1.0, help="1 = día completo, 0.5 = medio día.")
     hours = fields.Float("Horas", help="Solo si el mensaje dice horas exactas; si no, se calculan con la jornada.")
     match = fields.Selection([
+        ('key', "Por clave"),
         ('exact', "Coincide"),
         ('alias', "Recordado"),
         ('fuzzy', "Parecido, confirma"),

@@ -3,12 +3,17 @@ from datetime import datetime, time, timedelta
 
 import pytz
 
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 DEFAULT_START = time(8, 0)
 DEFAULT_HOURS = 8.0
 ROLL_FRACTIONS = (0.5, 1.0)
+# Exit data moved to the after-lunch attendance when a closed day is split.
+LUNCH_COPY_FIELDS = (
+    'check_out', 'field_out_kind', 'out_face_distance', 'out_gps_distance', 'out_latitude', 'out_longitude',
+    'out_mode', 'out_ip_address', 'out_browser', 'out_city', 'out_country_name',
+)
 
 
 class HrFieldService(models.AbstractModel):
@@ -145,8 +150,8 @@ class HrFieldService(models.AbstractModel):
 
     @api.model
     def _roll_people(self, owner):
-        crew = owner._field_candidates()
-        others = self.env['hr.employee'].search([('field_role', '!=', False), ('id', 'not in', crew.ids)])
+        crew = owner | owner.field_crew_ids.filtered('active')
+        others = self.env['hr.employee']._field_staff() - crew
         return crew, others
 
     @api.model
@@ -172,8 +177,8 @@ class HrFieldService(models.AbstractModel):
             'date': day.isoformat(),
             'days': [d.isoformat() for d in days],
             'projects': [{'id': p.id, 'name': p.display_name} for p in owner.field_project_ids],
-            'crew': [{'id': e.id, 'name': e.name} for e in crew],
-            'others': [{'id': e.id, 'name': e.name} for e in others],
+            'crew': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''} for e in crew],
+            'others': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''} for e in others],
             'registered': registered,
         }
 
@@ -184,7 +189,7 @@ class HrFieldService(models.AbstractModel):
         for attendance in self.env['hr.attendance'].search([('employee_id', 'in', employees.ids), ('field_date', '=', day)]):
             notes = busy.setdefault(attendance.employee_id.id, [])
             if not attendance.field_allocation_ids:
-                notes.append({'project_id': False, 'mine': False, 'label': _("marcó con cámara")})
+                notes.append({'project_id': False, 'mine': False, 'label': _("marcaje con cámara")})
             for allocation in attendance.field_allocation_ids:
                 amount = _("día") if allocation.fraction >= 1 else _("½ día") if allocation.fraction == 0.5 \
                     else _("%s día", round(allocation.fraction, 2))
@@ -226,3 +231,84 @@ class HrFieldService(models.AbstractModel):
             rows.append({'employee': employee, 'project': project, 'name': _("Pase de lista"), 'fraction': fraction})
         result = self._register_day(day, owner, rows, replace_project=project)
         return dict(result, project=project.display_name)
+
+    # ------------------------------------------------------------------
+    # Lunch registered later (the supervisor was at another site)
+    # ------------------------------------------------------------------
+
+    @api.model
+    def _parse_local_time(self, employee, day, value):
+        """'13:30' on ``day`` in the employee's timezone -> naive UTC datetime."""
+        try:
+            hour, minute = (int(part) for part in str(value).split(':'))
+            local = time(hour, minute)
+        except (TypeError, ValueError):
+            raise UserError(_("Hora inválida: %s", value))
+        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        return tz.localize(datetime.combine(day, local)).astimezone(pytz.utc).replace(tzinfo=None)
+
+    @api.model
+    def _late_lunch(self, owner, pin, employee_id, day, lunch_out, lunch_in, project_id=None):
+        """Split the attendance that covers the lunch into before and after lunch.
+        Both parts go to HR review."""
+        if owner.field_role != 'supervisor':
+            raise UserError(_("Solo un supervisor puede registrar la comida."))
+        if not owner._field_check_pin(pin):
+            return {'error': _("PIN incorrecto.")}
+        if day not in self._roll_days(owner):
+            raise UserError(_("Solo se puede registrar la comida de hoy o de ayer."))
+        employee = owner._field_candidates().filtered(lambda e: e.id == int(employee_id or 0))
+        if not employee:
+            raise UserError(_("Esa persona no es personal de campo."))
+        start = self._parse_local_time(employee, day, lunch_out)
+        end = self._parse_local_time(employee, day, lunch_in)
+        if end <= start:
+            raise UserError(_("El regreso de comer debe ser después de la salida a comer."))
+        if end > fields.Datetime.now():
+            raise UserError(_("El regreso de comer no puede ser una hora que aún no pasa."))
+        Attendance = self.env['hr.attendance']
+        attendance = Attendance.search([
+            ('employee_id', '=', employee.id), ('check_in', '<', start),
+            '|', ('check_out', '=', False), ('check_out', '>', end),
+        ], limit=1)
+        if not attendance:
+            return {'error': _("%s no tiene una entrada que cubra ese horario.", employee.name)}
+        if attendance.field_allocation_ids:
+            return {'error': _("La asistencia de %s viene de un pase de lista; ahí no se separa la comida.",
+                               employee.name)}
+        project = attendance.field_project_id
+        if not project:
+            project, error = self._pick_project(owner, project_id)
+            if error:
+                return error
+        reason = _("Comida registrada después por %s", owner.name)
+        out_fields = [name for name in LUNCH_COPY_FIELDS if name in attendance._fields]
+        after_vals = {
+            'employee_id': employee.id,
+            'check_in': end,
+            'field_project_id': project.id,
+            'field_supervisor_id': owner.id,
+            'field_in_kind': 'lunch',
+            'field_state': 'review',
+            'field_review_reason': reason,
+        }
+        if attendance.check_out:
+            after_vals.update({name: attendance[name] for name in out_fields})
+            after_vals['out_field_device_id'] = attendance.out_field_device_id.id
+            after_vals['out_field_photo'] = attendance.out_field_photo
+        attendance.write({
+            'check_out': start,
+            'field_out_kind': 'lunch',
+            'field_project_id': project.id,
+            'field_state': 'review' if attendance.field_state in ('valid', 'approved', False) else attendance.field_state,
+            'out_field_device_id': False,
+            'out_field_photo': False,
+        })
+        attendance._field_add_review_reason(reason)
+        Attendance.create(after_vals)
+        return {
+            'employee': employee.name,
+            'lunch_out': self._local_time(employee, start),
+            'lunch_in': self._local_time(employee, end),
+            'project': project.display_name,
+        }

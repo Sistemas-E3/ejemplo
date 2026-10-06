@@ -1,4 +1,4 @@
-# Asistencias en campo (Odoo 19)
+# Asistencias en campo (Odoo 18)
 
 Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado a la obra
 (proyecto) y convertido automáticamente en horas del proyecto.
@@ -23,7 +23,38 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 5. Al cerrar una asistencia válida o aprobada se crea su línea de horas en el proyecto.
    Las que están en revisión generan horas cuando Operaciones las aprueba (*Asistencias › Campo › Marcajes*).
 
-## Cargar la lista de WhatsApp (sin fotos)
+## El día en cuatro marcajes
+
+| Momento | Dónde | Cómo |
+|---|---|---|
+| Entrada | Tablet de la oficina | Se para frente a la cámara (no toca nada) o pasa su tarjeta |
+| Salida a comer | Teléfono del supervisor, en la obra | Botón **Salida a comer** y cara |
+| Regreso de comer | Teléfono del supervisor | Botón **Regreso de comer** y cara |
+| Salida | Teléfono del supervisor | Botón **Salida** y cara |
+
+- **Kiosco de oficina**: un empleado con rol *Kiosco de oficina* (por ejemplo "Tablet recepción") con su enlace
+  y su tablet aprobada. Reconoce a todo el personal de campo de forma automática; un segundo escaneo en
+  menos de 30 minutos se ignora. Acepta lectores de tarjeta que escriben el número y Enter: el número es el
+  **ID de credencial** del empleado. *Marcar con PIN* para quien no se reconozca (queda en revisión).
+- La entrada en oficina no tiene obra; al marcar en la obra, esas horas se cargan a la obra donde marca.
+- El teléfono del supervisor reconoce a todo el personal de campo (también a gente prestada de otra cuadrilla);
+  las horas van a las obras activas de quien marca.
+- **Registrar comida después**: si el supervisor estaba en otra obra a la hora de comer, elige la persona,
+  el día (hoy o ayer) y las horas de salida y regreso. La asistencia se parte en dos y queda en revisión de RH.
+- Si alguien no marcó salida el día anterior, al marcar la entrada se cierra esa asistencia sin horas y queda
+  en revisión para que RH capture la salida.
+- Cuando la comida está marcada, las horas del proyecto son las reales (no se descuenta además la hora de comida del horario).
+
+## Clave del empleado
+
+Cada empleado tiene su clave en el campo **ID de credencial** (pestaña Campo o Configuración de RH). Se usa para:
+
+- la tarjeta en el kiosco de oficina;
+- la lista de WhatsApp: `1042 Juan` o solo `1042` se reconoce por la clave antes que por el nombre
+  (los números de 1 o 2 dígitos al inicio se toman como numeración de la lista);
+- buscar gente en el pase de lista.
+
+## Cargar la lista de WhatsApp (plan de contingencia)
 
 Sirve con el mensaje que ya mandan los supervisores al grupo, por ejemplo:
 
@@ -59,7 +90,7 @@ Otra forma de reportar, además de WhatsApp (las dos conviven y se suman):
 1. El supervisor abre su enlace (*Personal de campo › Campo › enlace*) en su teléfono aprobado. Entra directo a **Pase de lista**;
    el botón *Cámara* lleva al marcaje con reconocimiento facial.
 2. Elige **Hoy** o **Ayer** y una de sus obras asignadas (solo ve esas).
-3. Palomea a su cuadrilla y cambia a **½ día** quien corresponda. La gente prestada se agrega buscándola por nombre.
+3. Palomea a su cuadrilla y cambia a **½ día** quien corresponda. La gente prestada se agrega buscándola por nombre o clave.
    Junto a cada persona se ve si ya tiene algo ese día (otra obra, otro supervisor o marcaje con cámara).
 4. Escribe su PIN y toca **Enviar lista**. Se crean las asistencias y las horas igual que con WhatsApp.
    Si vuelve a enviar la lista de esa obra y día, **reemplaza** la anterior (sirve para corregir).

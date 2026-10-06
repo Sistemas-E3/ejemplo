@@ -45,7 +45,7 @@
                         <field name="fraction"/>
                         <field name="hours" widget="float_time" optional="hide"/>
                         <field name="match" widget="badge"
-                               decoration-success="match in ('exact', 'alias')"
+                               decoration-success="match in ('key', 'exact', 'alias')"
                                decoration-warning="match == 'fuzzy'"
                                decoration-danger="match == 'none'"/>
                         <field name="warning"/>

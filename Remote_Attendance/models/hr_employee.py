@@ -1,3 +1,4 @@
+import re
 import secrets
 from datetime import datetime, timedelta
 
@@ -11,13 +12,21 @@ PIN_MAX_FAILURES = 5
 PIN_LOCK_MINUTES = 15
 
 
+def compact_key(text):
+    """Employee key without spaces, dashes or case: "E-0042" -> "e0042"."""
+    return re.sub(r'[^a-z0-9]', '', (text or '').lower())
+
+
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
     field_role = fields.Selection([
         ('supervisor', "Supervisor de campo"),
         ('worker', "Trabajador de campo"),
-    ], string="Rol en campo", groups=OPS_GROUP, tracking=True)
+        ('office', "Kiosco de oficina"),
+    ], string="Rol en campo", groups=OPS_GROUP, tracking=True,
+        help="Kiosco de oficina: el enlace de la tablet de la entrada; reconoce a todo el personal de campo "
+             "y acepta la tarjeta (ID de credencial).")
     field_supervisor_id = fields.Many2one(
         'hr.employee', string="Supervisor de su cuadrilla", groups=OPS_GROUP, tracking=True,
         domain=[('field_role', '=', 'supervisor')], index='btree_not_null')
@@ -101,12 +110,33 @@ class HrEmployee(models.Model):
             return self.env['project.project']
         return self.field_active_project_ids & self.field_project_ids
 
+    @api.model
+    def _field_staff(self):
+        """Everybody who marks attendance in the field (supervisors and workers)."""
+        return self.search([('field_role', 'in', ('supervisor', 'worker'))])
+
     def _field_candidates(self):
-        """Employees that can be recognised on this owner's link."""
+        """Employees that can be recognised on this owner's link.
+
+        A supervisor's phone and the office kiosk recognise all the field staff, because
+        supervisors borrow people from other crews; a personal link only its owner."""
         self.ensure_one()
         if self.field_role == 'supervisor':
-            return self | self.field_crew_ids.filtered('active')
+            return self | self.field_crew_ids.filtered('active') | self._field_staff()
+        if self.field_role == 'office':
+            return self._field_staff()
         return self
+
+    def _field_keys(self):
+        """{compact key: employee} for the employees of self that have an "ID de credencial"."""
+        return {compact_key(e.barcode): e for e in self if compact_key(e.barcode)}
+
+    def _field_by_key(self, key):
+        """Field employee whose "ID de credencial" is ``key`` (card reader or typed)."""
+        key = compact_key(key)
+        if not key:
+            return self.browse()
+        return self._field_staff()._field_keys().get(key, self.browse())
 
     def _field_check_pin(self, pin):
         """Check the employee PIN with lockout. Return True/False, raise when locked."""
