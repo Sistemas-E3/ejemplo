@@ -47,10 +47,12 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 
 ## Clave del empleado
 
-Cada empleado tiene su clave en el campo **ID de credencial** (pestaña Campo o Configuración de RH). Se usa para:
+La clave es el **Número de registro del empleado** (pestaña Nómina), la misma de nómina. Si un empleado
+no tiene, se usa su **ID de credencial**. La tarjeta funciona con cualquiera de los dos: el ID de credencial
+solo hace falta si el número de la tarjeta es distinto al de nómina. La clave se usa para:
 
 - la tarjeta en el kiosco de oficina;
-- la lista de WhatsApp: `1042 Juan` o solo `1042` se reconoce por la clave antes que por el nombre
+- la lista de WhatsApp: `1608 Juan` o solo `1608` se reconoce por la clave antes que por el nombre
   (los números de 1 o 2 dígitos al inicio se toman como numeración de la lista);
 - buscar gente en el pase de lista.
 

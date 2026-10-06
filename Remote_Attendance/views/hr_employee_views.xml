@@ -10,7 +10,9 @@
                     <group>
                         <group string="Rol">
                             <field name="field_role"/>
-                            <field name="barcode" string="Clave (ID de credencial)" invisible="field_role == 'office'"/>
+                            <field name="field_key" invisible="field_role == 'office'"/>
+                            <field name="barcode" string="Tarjeta (ID de credencial)" invisible="field_role == 'office'"
+                                   help="Solo si el número de su tarjeta es distinto a su número de registro."/>
                             <field name="field_supervisor_id" invisible="field_role != 'worker'"/>
                             <field name="field_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
                             <field name="field_active_project_ids" widget="many2many_tags" invisible="field_role != 'supervisor'"/>
@@ -45,7 +47,7 @@
                     </group>
                     <field name="field_crew_ids" invisible="field_role != 'supervisor'" readonly="1">
                         <list>
-                            <field name="barcode" string="Clave"/>
+                            <field name="field_key"/>
                             <field name="name"/>
                             <field name="job_title"/>
                             <field name="field_face_count"/>
@@ -72,7 +74,7 @@
         <field name="priority">100</field>
         <field name="arch" type="xml">
             <list string="Personal de campo">
-                <field name="barcode" string="Clave"/>
+                <field name="field_key"/>
                 <field name="name"/>
                 <field name="field_role"/>
                 <field name="field_supervisor_id"/>

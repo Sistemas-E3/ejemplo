@@ -99,7 +99,7 @@ class HrFieldService(models.AbstractModel):
             'active_projects': self._project_payload(active),
             'assignable_projects': self._project_payload(owner.field_project_ids)
             if owner.field_role == 'supervisor' else [],
-            'crew': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''}
+            'crew': [{'id': e.id, 'name': e.name, 'key': e.field_key or ''}
                      for e in owner._field_candidates().sorted('name')],
             'days': [day.isoformat() for day in self._roll_days(owner)]
             if owner.field_role == 'supervisor' else [],

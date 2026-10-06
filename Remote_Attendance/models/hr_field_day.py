@@ -177,8 +177,8 @@ class HrFieldService(models.AbstractModel):
             'date': day.isoformat(),
             'days': [d.isoformat() for d in days],
             'projects': [{'id': p.id, 'name': p.display_name} for p in owner.field_project_ids],
-            'crew': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''} for e in crew],
-            'others': [{'id': e.id, 'name': e.name, 'key': e.barcode or ''} for e in others],
+            'crew': [{'id': e.id, 'name': e.name, 'key': e.field_key or ''} for e in crew],
+            'others': [{'id': e.id, 'name': e.name, 'key': e.field_key or ''} for e in others],
             'registered': registered,
         }
 

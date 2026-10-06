@@ -48,6 +48,9 @@ class HrEmployee(models.Model):
     field_face_consent_date = fields.Date(
         "Consentimiento biométrico", groups=OPS_GROUP, tracking=True,
         help="Fecha en que el empleado firmó el consentimiento para el uso de su rostro.")
+    field_key = fields.Char(
+        "Clave", compute='_compute_field_key', groups=OPS_GROUP,
+        help="Número de registro del empleado (nómina); si no tiene, su ID de credencial.")
     field_pin_failures = fields.Integer(groups=OPS_GROUP, copy=False)
     field_pin_locked_until = fields.Datetime("PIN bloqueado hasta", groups=OPS_GROUP, copy=False)
 
@@ -58,6 +61,18 @@ class HrEmployee(models.Model):
         base_url = self.get_base_url()
         for employee in self:
             employee.field_kiosk_url = employee.field_token and f"{base_url}/campo/{employee.field_token}"
+
+    def _field_key_values(self):
+        """Keys that identify the employee: payroll registration number, then badge (ID de credencial)."""
+        self.ensure_one()
+        values = [self.registration_number] if 'registration_number' in self._fields else []
+        return [value for value in values + [self.barcode] if compact_key(value)]
+
+    @api.depends('barcode')
+    def _compute_field_key(self):
+        for employee in self:
+            keys = employee._field_key_values()
+            employee.field_key = keys[0] if keys else False
 
     @api.depends('field_face_ids')
     def _compute_field_face_count(self):
@@ -128,8 +143,12 @@ class HrEmployee(models.Model):
         return self
 
     def _field_keys(self):
-        """{compact key: employee} for the employees of self that have an "ID de credencial"."""
-        return {compact_key(e.barcode): e for e in self if compact_key(e.barcode)}
+        """{compact key: employee} by registration number and by "ID de credencial"."""
+        keys = {}
+        for employee in self:
+            for value in employee._field_key_values():
+                keys.setdefault(compact_key(value), employee)
+        return keys
 
     def _field_by_key(self, key):
         """Field employee whose "ID de credencial" is ``key`` (card reader or typed)."""

@@ -218,6 +218,14 @@ class TestFieldMarks(TransactionCase):
         found = [(line.employee_id, line.match) for line in wizard.line_ids]
         self.assertEqual(found, [(self.worker, 'key'), (self.borrowed, 'key'), (self.supervisor, 'exact')])
 
+    def test_payroll_registration_number_is_the_key(self):
+        if 'registration_number' not in self.worker._fields:
+            self.skipTest("Sin nómina instalada")
+        self.worker.write({'registration_number': '1608', 'barcode': '9001'})
+        self.assertEqual(self.worker.field_key, '1608')
+        self.assertEqual(self.env['hr.employee']._field_by_key('1608'), self.worker)
+        self.assertEqual(self.env['hr.employee']._field_by_key('9001'), self.worker, "The card still works")
+
     def test_state_has_keys(self):
         state = self.service._state(self.supervisor, self.devices[self.supervisor])
         keys = {person['id']: person['key'] for person in state['crew']}
