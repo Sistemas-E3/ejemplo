@@ -159,7 +159,7 @@ class TestFieldTimesheetList(TestFieldManualLoad):
         sheet = book['Hojas de horas']
         rows = list(sheet.iter_rows(values_only=True))
         self.assertEqual(list(rows[0]), IMPORT_HEADERS)
-        self.assertEqual(rows[1][1:], ('Ana Manual', 'Obra manual', None, 'Asistencia en obra', 11))
+        self.assertEqual(rows[1][1:], ('Ana Manual', 'Obra manual', 11))
         self.assertEqual(rows[1][0].date(), DAY)
         detail = list(book['Detalle'].iter_rows(values_only=True))
         self.assertEqual(detail[1][3], 'Sup Manual')

@@ -75,7 +75,7 @@ Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*)
 En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el periodo (y si quieres un supervisor o una obra),
 **Generar lista** y **Descargar Excel**. Entran solo asistencias válidas o aprobadas, un renglón por persona, día y obra.
 
-- La hoja **Hojas de horas** tiene las columnas Fecha, Empleado, Proyecto, Tarea, Descripción y Cantidad, que Odoo reconoce
+- La hoja **Hojas de horas** tiene las columnas Fecha, Empleado, Proyecto y Cantidad, que Odoo reconoce
   solas al importar en *Proyectos › Hojas de horas › Importar*. El módulo deja guardado que "Proyecto" es el proyecto de la hoja
   de horas (si no, Odoo lo confunde con la cuenta analítica).
 - La hoja **Detalle** trae clave, supervisor, entrada, salida, horas extra y quién la cargó a mano.

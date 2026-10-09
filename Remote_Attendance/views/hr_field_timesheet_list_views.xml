@@ -36,8 +36,8 @@
                         </group>
                     </group>
                     <div class="text-muted mb-2">
-                        Solo entran asistencias válidas o aprobadas, con salida. La hoja «Hojas de horas» del Excel tiene las
-                        columnas de la importación de Proyectos › Hojas de horas; la hoja «Detalle» trae entradas, salidas y supervisor.
+                        Solo entran asistencias válidas o aprobadas, con salida. La hoja «Hojas de horas» del Excel (Fecha, Empleado, Proyecto,
+                        Cantidad) se importa en Proyectos › Hojas de horas; la hoja «Detalle» trae entradas, salidas y supervisor.
                     </div>
                     <field name="line_ids" readonly="state == 'exported'">
                         <list editable="bottom">

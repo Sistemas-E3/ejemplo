@@ -10,7 +10,7 @@ from odoo.exceptions import UserError
 
 # Same headers as the timesheet export of Odoo, so the file goes back in with
 # Proyectos › Hojas de horas › Importar without mapping columns by hand.
-IMPORT_HEADERS = ['Fecha', 'Empleado', 'Proyecto', 'Tarea', 'Descripción', 'Cantidad']
+IMPORT_HEADERS = ['Fecha', 'Empleado', 'Proyecto', 'Cantidad']
 # Lists older than this are deleted every night (Remote_Attendance.list_keep_days, 0 = keep them).
 DEFAULT_KEEP_DAYS = 365
 DETAIL_HEADERS = ['Fecha', 'No. Empleado', 'Empleado', 'Supervisor', 'Proyecto', 'Entrada', 'Salida',
@@ -151,18 +151,14 @@ class HrFieldTimesheetList(models.Model):
 
         sheet = book.add_worksheet("Hojas de horas")
         sheet.write_row(0, 0, IMPORT_HEADERS, bold)
-        description = _("Asistencia en obra")
         for row, line in enumerate(self.line_ids, start=1):
             sheet.write_datetime(row, 0, fields.Datetime.to_datetime(line.date), date)
             sheet.write_string(row, 1, line.employee_id.name or '')
             sheet.write_string(row, 2, line.project_id.display_name or '')
-            sheet.write_blank(row, 3, None)
-            sheet.write_string(row, 4, description)
-            sheet.write_number(row, 5, round(line.hours, 2), number)
+            sheet.write_number(row, 3, round(line.hours, 2), number)
         sheet.set_column(0, 0, 12)
         sheet.set_column(1, 2, 40)
-        sheet.set_column(3, 4, 20)
-        sheet.set_column(5, 5, 10)
+        sheet.set_column(3, 3, 10)
 
         detail = book.add_worksheet("Detalle")
         detail.write_row(0, 0, DETAIL_HEADERS, bold)
