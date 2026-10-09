@@ -70,6 +70,18 @@ En *Asistencias › Campo › Asistencia por supervisor* se ve todo agrupado por
 
 Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*) y se pueden filtrar con *Cargadas a mano* en *Marcajes*.
 
+## Listas de horas en Excel
+
+En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el periodo (y si quieres un supervisor o una obra),
+**Generar lista** y **Descargar Excel**. Entran solo asistencias válidas o aprobadas, un renglón por persona, día y obra.
+
+- La hoja **Hojas de horas** tiene las columnas Fecha, Empleado, Proyecto, Tarea, Descripción y Cantidad, que Odoo reconoce
+  solas al importar en *Proyectos › Hojas de horas › Importar*. El módulo deja guardado que "Proyecto" es el proyecto de la hoja
+  de horas (si no, Odoo lo confunde con la cuenta analítica).
+- La hoja **Detalle** trae clave, supervisor, entrada, salida, horas extra y quién la cargó a mano.
+- Cada lista queda guardada con su Excel y se borra sola al año (`Remote_Attendance.list_keep_days`, 365; 0 = nunca).
+- Cuidado: las asistencias ya crean sus horas en el proyecto. Importar el Excel en la misma base las duplica.
+
 ## Horario, comida y tiempo extra
 
 - Las horas del proyecto se cuentan solo dentro del horario: de **7:00 a 17:00** (hora del empleado; revisa que su

@@ -4,6 +4,7 @@ from . import hr_employee
 from . import hr_field_device
 from . import hr_field_face
 from . import hr_field_manual
+from . import hr_field_timesheet_list
 from . import hr_field_roster
 from . import hr_field_service
 from . import project_project

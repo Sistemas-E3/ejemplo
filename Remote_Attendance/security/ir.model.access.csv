@@ -11,3 +11,5 @@ access_hr_field_project_alias_ops,hr.field.project.alias operaciones,model_hr_fi
 access_hr_field_roster_block_ops,hr.field.roster.block operaciones,model_hr_field_roster_block,group_field_operations,1,1,1,1
 access_hr_field_manual_load_ops,hr.field.manual.load operaciones,model_hr_field_manual_load,group_field_operations,1,1,1,1
 access_hr_field_manual_line_ops,hr.field.manual.line operaciones,model_hr_field_manual_line,group_field_operations,1,1,1,1
+access_hr_field_timesheet_list_ops,hr.field.timesheet.list operaciones,model_hr_field_timesheet_list,group_field_operations,1,1,1,1
+access_hr_field_timesheet_list_line_ops,hr.field.timesheet.list.line operaciones,model_hr_field_timesheet_list_line,group_field_operations,1,1,1,1

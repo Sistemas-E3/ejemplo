@@ -121,3 +121,66 @@ class TestFieldManualLoad(TransactionCase):
         wizard.write({'date': date(2026, 9, 30), 'line_ids': [(5,), (0, 0, {'employee_id': self.worker_b.id})]})
         with self.assertRaises(UserError):
             wizard.action_confirm()
+
+
+@tagged('post_install', '-at_install')
+@freeze_time('2026-09-28 18:00:00')
+class TestFieldTimesheetList(TestFieldManualLoad):
+    """Saved lists of hours exported to Excel with the timesheet import columns."""
+
+    def test_list_and_excel(self):
+        import base64
+        import io
+        import openpyxl
+        from ..models.hr_field_timesheet_list import IMPORT_HEADERS
+
+        form = self._form()
+        form.supervisor_id = self.supervisor
+        with form.line_ids.edit(1) as line:
+            line.check_out = 19.0          # Ana: 9 + 2 approved overtime
+        with form.line_ids.edit(0) as line:
+            line.present = False
+        form.save().action_confirm()
+        self._attendance(self.worker_b).field_state = 'review'   # not accepted: stays out of the list
+
+        Lists = self.env['hr.field.timesheet.list'].with_user(self.ops_user)
+        record = Lists.create({'date_from': DAY, 'date_to': DAY, 'supervisor_id': self.supervisor.id})
+        self.assertIn('Sup Manual', record.name)
+        record.action_generate()
+        self.assertEqual(record.line_ids.employee_id, self.worker_a)
+        self.assertEqual(record.line_ids.hours, 11.0)
+        self.assertEqual(record.line_ids.overtime_hours, 2.0)
+        self.assertEqual(record.line_ids.project_id, self.project)
+
+        action = record.action_export_excel()
+        self.assertEqual(record.state, 'exported')
+        self.assertIn('/excel_file/', action['url'])
+        book = openpyxl.load_workbook(io.BytesIO(base64.b64decode(record.excel_file)))
+        sheet = book['Hojas de horas']
+        rows = list(sheet.iter_rows(values_only=True))
+        self.assertEqual(list(rows[0]), IMPORT_HEADERS)
+        self.assertEqual(rows[1][1:], ('Ana Manual', 'Obra manual', None, 'Asistencia en obra', 11))
+        self.assertEqual(rows[1][0].date(), DAY)
+        detail = list(book['Detalle'].iter_rows(values_only=True))
+        self.assertEqual(detail[1][3], 'Sup Manual')
+        self.assertEqual(detail[1][5:7], ('07:00', '19:00'))
+
+        other = Lists.create({'date_from': DAY, 'date_to': DAY, 'project_id': self.other_project.id})
+        with self.assertRaises(UserError):
+            other.action_export_excel()
+
+    def test_old_lists_are_deleted(self):
+        Lists = self.env['hr.field.timesheet.list']
+        old, recent = Lists.create([{'date_from': DAY, 'date_to': DAY}, {'date_from': DAY, 'date_to': DAY}])
+        self.env.cr.execute("UPDATE hr_field_timesheet_list SET create_date = %s WHERE id = %s",
+                            ('2025-06-01 00:00:00', old.id))
+        old.invalidate_recordset(['create_date'])
+        Lists._cron_delete_old()
+        self.assertFalse(old.exists())
+        self.assertTrue(recent.exists())
+        self.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.list_keep_days', '0')
+        self.env.cr.execute("UPDATE hr_field_timesheet_list SET create_date = %s WHERE id = %s",
+                            ('2024-01-01 00:00:00', recent.id))
+        recent.invalidate_recordset(['create_date'])
+        Lists._cron_delete_old()
+        self.assertTrue(recent.exists())

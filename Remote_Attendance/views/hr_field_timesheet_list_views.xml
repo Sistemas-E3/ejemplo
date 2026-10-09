@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_timesheet_list_view_form" model="ir.ui.view">
+        <field name="name">hr.field.timesheet.list.form</field>
+        <field name="model">hr.field.timesheet.list</field>
+        <field name="arch" type="xml">
+            <form string="Lista de horas">
+                <header>
+                    <button name="action_generate" type="object" string="Generar lista" class="btn-primary"
+                            invisible="line_ids"/>
+                    <button name="action_generate" type="object" string="Volver a generar" invisible="not line_ids"/>
+                    <button name="action_export_excel" type="object" string="Descargar Excel" class="btn-primary"
+                            invisible="not line_ids"/>
+                    <button name="action_back_to_draft" type="object" string="Regresar a borrador"
+                            invisible="state != 'exported'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date_from" readonly="state == 'exported'"/>
+                            <field name="date_to" readonly="state == 'exported'"/>
+                            <field name="supervisor_id" options="{'no_create': True}" readonly="state == 'exported'"/>
+                            <field name="project_id" options="{'no_create': True}" readonly="state == 'exported'"/>
+                        </group>
+                        <group>
+                            <field name="line_count"/>
+                            <field name="total_hours" widget="float_time"/>
+                            <field name="excel_name" invisible="1"/>
+                            <field name="excel_file" filename="excel_name" invisible="not excel_file"/>
+                            <field name="exported_by_id" invisible="not exported_by_id"/>
+                            <field name="exported_on" invisible="not exported_on"/>
+                        </group>
+                    </group>
+                    <div class="text-muted mb-2">
+                        Solo entran asistencias válidas o aprobadas, con salida. La hoja «Hojas de horas» del Excel tiene las
+                        columnas de la importación de Proyectos › Hojas de horas; la hoja «Detalle» trae entradas, salidas y supervisor.
+                    </div>
+                    <field name="line_ids" readonly="state == 'exported'">
+                        <list editable="bottom">
+                            <field name="date"/>
+                            <field name="employee_key" optional="show"/>
+                            <field name="employee_id" options="{'no_create': True}"/>
+                            <field name="supervisor_id" options="{'no_create': True}"/>
+                            <field name="project_id" options="{'no_create': True}"/>
+                            <field name="hours" widget="float_time" sum="Horas"/>
+                            <field name="overtime_hours" widget="float_time" sum="Extra" optional="show"/>
+                        </list>
+                    </field>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_timesheet_list_view_list" model="ir.ui.view">
+        <field name="name">hr.field.timesheet.list.list</field>
+        <field name="model">hr.field.timesheet.list</field>
+        <field name="arch" type="xml">
+            <list string="Listas de horas">
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="supervisor_id" optional="show"/>
+                <field name="project_id" optional="show"/>
+                <field name="line_count"/>
+                <field name="total_hours" widget="float_time"/>
+                <field name="create_uid" string="Creada por" optional="show"/>
+                <field name="exported_on" optional="show"/>
+                <field name="state" widget="badge" decoration-success="state == 'exported'" decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_timesheet_list_action" model="ir.actions.act_window">
+        <field name="name">Listas de horas</field>
+        <field name="res_model">hr.field.timesheet.list</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Crea tu primera lista de horas</p>
+            <p>Elige el periodo, y si quieres un supervisor o una obra; Odoo arma la lista con las asistencias aceptadas
+               y la descargas en Excel para importarla en las hojas de horas. Cada lista queda guardada aquí.</p>
+        </field>
+    </record>
+</odoo>

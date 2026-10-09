@@ -1,6 +1,6 @@
 {
     'name': 'Asistencias en campo',
-    'version': '18.0.1.3.0',
+    'version': '18.0.1.4.0',
     'category': 'Human Resources/Attendances',
     'summary': 'Marcaje con reconocimiento facial y GPS desde el teléfono, ligado a la obra y a las horas del proyecto',
     'description': """
@@ -17,7 +17,7 @@ Asistencias en campo
 """,
     'author': 'E3',
     'license': 'LGPL-3',
-    'depends': ['hr_attendance', 'hr_timesheet', 'project'],
+    'depends': ['hr_attendance', 'hr_timesheet', 'project', 'mail', 'base_import'],
     'data': [
         'security/field_security.xml',
         'security/ir.model.access.csv',
@@ -28,7 +28,10 @@ Asistencias en campo
         'views/hr_attendance_views.xml',
         'views/hr_field_roster_views.xml',
         'views/hr_field_manual_views.xml',
+        'views/hr_field_timesheet_list_views.xml',
         'views/field_menus.xml',
+        'data/field_cron.xml',
+        'data/import_mapping.xml',
     ],
     'installable': True,
     'application': False,
