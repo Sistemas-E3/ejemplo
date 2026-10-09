@@ -57,6 +57,14 @@ class HrFieldService(models.AbstractModel):
             return DEFAULT_FACE_THRESHOLD
 
     @api.model
+    def _manual_enabled(self):
+        """Whether supervisor and worker links offer the manual options (marking with PIN from a list,
+        roll call and lunch registered later). Off by default: in the field attendance is only by camera.
+        Turn it on with the system parameter ``Remote_Attendance.supervisor_manual`` = 1."""
+        value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.supervisor_manual')
+        return (value or '').strip().lower() in ('1', 'true', 'yes', 'si', 'sí')
+
+    @api.model
     def _owner_from_token(self, token):
         if not token or len(token) < 20:
             return self.env['hr.employee']
@@ -103,6 +111,7 @@ class HrFieldService(models.AbstractModel):
             'crew': [{'id': e.id, 'name': e.name, 'key': e.field_key or '', 'face': bool(e.field_face_ids)}
                      for e in owner._field_candidates().sorted('name')],
             'can_enroll': owner.field_role in ('supervisor', 'office'),
+            'manual': owner.field_role == 'office' or self._manual_enabled(),
             'days': [day.isoformat() for day in self._roll_days(owner)]
             if owner.field_role == 'supervisor' else [],
         }
@@ -198,10 +207,15 @@ class HrFieldService(models.AbstractModel):
         ``project``, ``state`` and ``reasons``."""
         if kind and kind not in PUNCH_KINDS:
             raise UserError(_("Tipo de marcaje inválido."))
+        manual = owner.field_role == 'office' or self._manual_enabled()
+        if not manual:
+            employee_id = pin = None
         employee, face_distance, reasons = self._identify(owner, descriptor, employee_id, pin, badge)
         if not employee:
             if reasons:
                 return {'error': reasons[0]}
+            if not manual:
+                return {'error': _("No te reconocí. Acércate a la cámara con buena luz e intenta de nuevo.")}
             return {'error': _("No te reconocí. Intenta de nuevo o marca con tu PIN."), 'need_pin': True}
         photo = clean_photo(photo)
         if owner.field_role == 'office':

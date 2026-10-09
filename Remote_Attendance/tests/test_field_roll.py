@@ -43,6 +43,8 @@ class TestFieldRoll(RollMixin, TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # These tests cover the manual options, hidden by default (camera only).
+        cls.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.supervisor_manual', '1')
         cls._setup_roll()
 
     def setUp(self):
@@ -176,6 +178,8 @@ class TestFieldRollRoutes(RollMixin, HttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # These tests cover the manual options, hidden by default (camera only).
+        cls.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.supervisor_manual', '1')
         cls._setup_roll()
 
     def test_roll_routes(self):

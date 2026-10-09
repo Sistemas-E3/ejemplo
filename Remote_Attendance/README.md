@@ -45,6 +45,13 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
   en revisión para que RH capture la salida.
 - Cuando la comida está marcada, las horas del proyecto son las reales (no se descuenta además la hora de comida del horario).
 
+## Solo cámara en campo
+
+En el teléfono del supervisor y en el enlace del trabajador la asistencia es **solo con cámara**: no aparecen el pase de lista,
+*Marcar con PIN* ni *Registrar comida después*, y el servidor los rechaza. Las funciones siguen en el módulo; para
+volver a mostrarlas pon el parámetro del sistema `Remote_Attendance.supervisor_manual` en `1`.
+La tablet de oficina conserva *Marcar con PIN* y la tarjeta.
+
 ## Cargar asistencias a mano (Operaciones)
 
 En *Asistencias › Campo › Cargar asistencias a mano*:

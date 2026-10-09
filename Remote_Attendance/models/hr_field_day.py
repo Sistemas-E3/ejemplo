@@ -158,6 +158,8 @@ class HrFieldService(models.AbstractModel):
     def _roll_state(self, owner, day=None):
         if owner.field_role != 'supervisor':
             raise UserError(_("Solo un supervisor puede pasar lista."))
+        if not self._manual_enabled():
+            raise UserError(_("La asistencia en campo es solo con cámara."))
         days = self._roll_days(owner)
         day = day if day in days else days[0]
         crew, others = self._roll_people(owner)
@@ -207,6 +209,8 @@ class HrFieldService(models.AbstractModel):
     def _roll_save(self, owner, pin, day, project_id, entries):
         if owner.field_role != 'supervisor':
             raise UserError(_("Solo un supervisor puede pasar lista."))
+        if not self._manual_enabled():
+            raise UserError(_("La asistencia en campo es solo con cámara."))
         if not owner._field_check_pin(pin):
             return {'error': _("PIN incorrecto.")}
         if day not in self._roll_days(owner):
@@ -253,6 +257,8 @@ class HrFieldService(models.AbstractModel):
         Both parts go to HR review."""
         if owner.field_role != 'supervisor':
             raise UserError(_("Solo un supervisor puede registrar la comida."))
+        if not self._manual_enabled():
+            raise UserError(_("La asistencia en campo es solo con cámara."))
         if not owner._field_check_pin(pin):
             return {'error': _("PIN incorrecto.")}
         if day not in self._roll_days(owner):

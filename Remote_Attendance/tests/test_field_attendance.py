@@ -23,6 +23,8 @@ class TestFieldAttendance(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # These tests cover the manual options, hidden by default (camera only).
+        cls.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.supervisor_manual', '1')
         cls.service = cls.env['hr.field.service'].sudo()
         cls.project_a = cls.env['project.project'].create({
             'name': 'Obra A', 'field_latitude': 19.4326, 'field_longitude': -99.1332, 'field_radius': 200,

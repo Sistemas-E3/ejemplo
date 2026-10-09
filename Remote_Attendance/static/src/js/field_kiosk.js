@@ -74,7 +74,7 @@
         }
         $("btn-projects").hidden = state.role !== "supervisor";
         $("btn-change").hidden = (state.active_projects || []).length < 2;
-        $("btn-lunch").hidden = state.role !== "supervisor";
+        $("btn-lunch").hidden = state.role !== "supervisor" || !state.manual;
     }
 
     async function refresh() {
@@ -101,8 +101,8 @@
         }
         state = result;
         if (state.role === "supervisor") {
-            $("btn-lunch").hidden = false;
-            setMode(mode);
+            $("btn-lunch").hidden = !state.manual;
+            setMode(state.manual ? mode : "camera");
         } else {
             show("screen-kiosk");
             renderActive();
@@ -114,15 +114,15 @@
     // Pase de lista (supervisor): palomear quién vino, sin cámara
     // ------------------------------------------------------------------
 
-    // El pase de lista queda escondido: el enlace del supervisor abre directo en la cámara.
-    const ROLL_ENABLED = false;
-    let mode = ROLL_ENABLED ? "roll" : "camera";
+    // El enlace abre directo en la cámara. El pase de lista, marcar con PIN y registrar la comida
+    // después solo aparecen si Operaciones los activa (parámetro Remote_Attendance.supervisor_manual).
+    let mode = "camera";
     let roll = null;
     let people = [];
 
     function setMode(value) {
         mode = value;
-        $("btn-mode").hidden = !ROLL_ENABLED;
+        $("btn-mode").hidden = !state.manual;
         if (mode === "roll") {
             show("screen-roll");
             $("btn-mode").textContent = "Cámara";
@@ -478,7 +478,12 @@
                 kind: kind || null,
             };
             if (!descriptor) {
-                askPin();
+                if (state.manual) {
+                    askPin();
+                } else {
+                    pending = null;
+                    toast("No te reconocí. Acércate a la cámara con buena luz e intenta de nuevo.", "error", 6000);
+                }
                 return;
             }
             await send();

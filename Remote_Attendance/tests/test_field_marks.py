@@ -30,6 +30,8 @@ class TestFieldMarks(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # These tests cover the manual options, hidden by default (camera only).
+        cls.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.supervisor_manual', '1')
         cls.service = cls.env['hr.field.service'].sudo()
         cls.Attendance = cls.env['hr.attendance']
         cls.project_a = cls.env['project.project'].create({
@@ -177,6 +179,23 @@ class TestFieldMarks(TransactionCase):
         self.assertEqual(self.other_supervisor._field_active_projects(), self.project_b)
         self.other_supervisor.field_project_ids |= self.project_a
         self.assertFalse(self.other_supervisor._field_active_projects(), "With several sites it must choose")
+
+    def test_field_is_camera_only_by_default(self):
+        self.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.supervisor_manual', False)
+        self.assertFalse(self.service._state(self.supervisor, self.devices[self.supervisor])['manual'])
+        self.assertTrue(self.service._state(self.office, self.devices[self.office])['manual'])
+        result = self._punch(self.supervisor, employee_id=self.worker.id, pin='5678', kind='in')
+        self.assertIn('error', result)
+        self.assertNotIn('need_pin', result)
+        self.assertFalse(self.Attendance.search([('employee_id', '=', self.worker.id)]))
+        self.assertEqual(self._punch(self.supervisor, descriptor=vector(1.0), kind='in')['employee'], self.worker.name)
+        with self.assertRaises(UserError):
+            self.service._roll_state(self.supervisor)
+        with self.assertRaises(UserError):
+            self.service._late_lunch(self.supervisor, '1234', self.worker.id, DAY, '13:00', '14:00')
+        # The office tablet keeps its PIN for whoever is not recognised.
+        result = self._office(employee_id=self.borrowed.id, pin='0000')
+        self.assertIn('error', result)
 
     def test_enroll_from_link(self):
         device = self.devices[self.supervisor]
