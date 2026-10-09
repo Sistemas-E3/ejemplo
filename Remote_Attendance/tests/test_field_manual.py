@@ -77,6 +77,8 @@ class TestFieldManualLoad(TransactionCase):
         form = self._form()
         with form.line_ids.new() as line:
             line.employee_id = self.loose
+            self.assertFalse(line.supervisor_id, "Carla has no crew")
+            line.supervisor_id = self.supervisor
             line.lunch = False
             line.project_id = self.other_project
         form.save().action_confirm()
@@ -84,6 +86,7 @@ class TestFieldManualLoad(TransactionCase):
         self.assertTrue(attendance.field_skip_lunch)
         self.assertEqual(attendance.field_regular_hours, 10.0)
         self.assertEqual(attendance.field_project_id, self.other_project)
+        self.assertEqual(attendance.field_supervisor_id, self.supervisor)
 
     def test_all_field_staff_and_existing_attendance_is_skipped(self):
         form = self._form()
@@ -91,6 +94,10 @@ class TestFieldManualLoad(TransactionCase):
         wizard.action_add_field_staff()
         self.assertTrue({self.supervisor, self.worker_a, self.worker_b, self.loose} <= set(wizard.line_ids.employee_id))
         wizard.line_ids.filtered(lambda l: l.employee_id not in (self.worker_a | self.loose)).present = False
+        with self.assertRaises(UserError):  # Carla has no crew: who brings her must be chosen
+            wizard.action_confirm()
+        wizard.line_ids.filtered(lambda l: l.employee_id == self.loose).supervisor_id = self.supervisor
+        self.assertEqual(wizard.line_ids.filtered(lambda l: l.employee_id == self.worker_a).supervisor_id, self.supervisor)
         wizard.action_confirm()
         self.assertTrue(self._attendance(self.worker_a))
 

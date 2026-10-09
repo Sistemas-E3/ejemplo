@@ -17,7 +17,7 @@ class HrFieldManualLoad(models.TransientModel):
     project_id = fields.Many2one('project.project', "Obra", required=True)
     supervisor_id = fields.Many2one(
         'hr.employee', "Supervisor", domain=[('field_role', '=', 'supervisor')],
-        help="Al elegirlo se agrega su cuadrilla a la lista.")
+        help="Al elegirlo se agrega su cuadrilla a la lista con él como supervisor que los trae.")
     check_in = fields.Float("Entrada", default=lambda self: self.env['hr.attendance']._field_schedule()['day_start'])
     check_out = fields.Float("Salida", default=lambda self: self.env['hr.attendance']._field_schedule()['day_end'])
     line_ids = fields.One2many('hr.field.manual.line', 'wizard_id', string="Personas")
@@ -35,6 +35,7 @@ class HrFieldManualLoad(models.TransientModel):
         listed = self.line_ids.employee_id
         return [Command.create({
             'employee_id': employee.id,
+            'supervisor_id': (self.supervisor_id or employee._field_leader()).id,
             'check_in': self.check_in,
             'check_out': self.check_out,
         }) for employee in employees if employee not in listed]
@@ -82,6 +83,9 @@ class HrFieldManualLoad(models.TransientModel):
         missing = lines.filtered(lambda l: not l.employee_id)
         if missing:
             raise UserError(_("Elige al empleado en todas las filas marcadas."))
+        missing = lines.filtered(lambda l: not l.supervisor_id)
+        if missing:
+            raise UserError(_("Elige el supervisor que trae a: %s.", ", ".join(missing.employee_id.mapped('name'))))
         repeated = {e.name for e in lines.employee_id if len(lines.filtered(lambda l: l.employee_id == e)) > 1}
         if repeated:
             raise UserError(_("Hay personas repetidas en la lista: %s.", ", ".join(sorted(repeated))))
@@ -105,7 +109,7 @@ class HrFieldManualLoad(models.TransientModel):
                 'in_mode': 'manual',
                 'out_mode': 'manual',
                 'field_project_id': (line.project_id or self.project_id).id,
-                'field_supervisor_id': self.supervisor_id.id,
+                'field_supervisor_id': line.supervisor_id.id,
                 'field_in_kind': 'site',
                 'field_out_kind': 'day',
                 'field_skip_lunch': not line.lunch,
@@ -140,6 +144,9 @@ class HrFieldManualLine(models.TransientModel):
     wizard_id = fields.Many2one('hr.field.manual.load', required=True, ondelete='cascade')
     present = fields.Boolean("Asistió", default=True)
     employee_id = fields.Many2one('hr.employee', "Empleado")
+    supervisor_id = fields.Many2one(
+        'hr.employee', "Supervisor que lo trae", domain=[('field_role', '=', 'supervisor')],
+        compute='_compute_supervisor_id', store=True, readonly=False)
     project_id = fields.Many2one('project.project', "Otra obra",
                                  help="Solo si esta persona trabajó en una obra distinta a la de arriba.")
     check_in = fields.Float("Entrada", default=lambda self: self.env['hr.attendance']._field_schedule()['day_start'])
@@ -149,6 +156,12 @@ class HrFieldManualLine(models.TransientModel):
     hours = fields.Float("Horas trabajadas", compute='_compute_hours', store=True, readonly=False,
                          help="Horas dentro del horario, sin la comida. Si las escribes, se ajusta la salida.")
     overtime_hours = fields.Float("Horas extra", compute='_compute_overtime_hours', store=True)
+
+    @api.depends('employee_id')
+    def _compute_supervisor_id(self):
+        for line in self:
+            if line.employee_id:
+                line.supervisor_id = line.wizard_id.supervisor_id or line.employee_id._field_leader()
 
     @api.depends('check_in', 'check_out', 'lunch')
     def _compute_hours(self):

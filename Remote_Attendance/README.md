@@ -58,7 +58,8 @@ En *Asistencias › Campo › Cargar asistencias a mano*:
 
 1. Elige el **día** y la **obra**. Si eliges un **supervisor**, se agrega su cuadrilla; *Agregar todo el personal de campo*
    pone a todos. También puedes agregar personas una por una.
-2. Palomea **Asistió** a quien vino. Entrada y salida empiezan en 7:00 y 17:00 (cámbialas arriba para todos o por persona).
+2. Cada fila lleva **empleado**, **supervisor que lo trae** y **horas trabajadas**. El supervisor se llena con el de arriba
+   o con el de su cuadrilla y se puede cambiar (gente prestada). Palomea **Asistió** a quien vino. Entrada y salida empiezan en 7:00 y 17:00 (cámbialas arriba para todos o por persona).
 3. Escribe la salida o directamente las **horas trabajadas**: Odoo ajusta la salida sumando la hora de comida.
    Quita *Salió a comer* si la persona no comió. La columna *Otra obra* (oculta) sirve si alguien estuvo en otra obra.
 4. **Cargar asistencias** crea las asistencias y sus horas en el proyecto con la misma regla del horario.

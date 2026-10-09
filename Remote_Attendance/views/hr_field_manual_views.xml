@@ -19,18 +19,19 @@
                     </group>
                 </group>
                 <div class="text-muted mb-2">
-                    Palomea a quien asistió. Puedes cambiar la entrada y la salida de cada persona,
-                    o escribir sus horas trabajadas y Odoo ajusta la salida. La comida no se cuenta.
+                    Por persona: empleado, supervisor que lo trae y horas trabajadas. Palomea a quien asistió.
+                    Al escribir las horas, Odoo ajusta la salida; también puedes cambiar entrada y salida. La comida no se cuenta.
                 </div>
                 <field name="line_ids">
                     <list editable="bottom" decoration-muted="not present">
                         <field name="present" widget="boolean_toggle"/>
                         <field name="employee_id" options="{'no_create': True}" required="present"/>
+                        <field name="supervisor_id" options="{'no_create': True}" required="present"/>
+                        <field name="hours" widget="float_time"/>
+                        <field name="overtime_hours" widget="float_time"/>
                         <field name="check_in" widget="float_time"/>
                         <field name="check_out" widget="float_time"/>
                         <field name="lunch"/>
-                        <field name="hours" widget="float_time"/>
-                        <field name="overtime_hours" widget="float_time"/>
                         <field name="project_id" options="{'no_create': True}" optional="hide"/>
                     </list>
                 </field>
