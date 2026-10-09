@@ -1,3 +1,5 @@
+from datetime import datetime, time, timedelta
+
 import pytz
 
 from odoo import _, api, fields, models
@@ -9,7 +11,21 @@ FIELD_STATES = [
     ('rejected', "Rechazada"),
 ]
 SYNC_FIELDS = {'check_in', 'check_out', 'field_project_id', 'field_state', 'employee_id', 'field_allocation_ids',
-               'field_in_kind', 'field_out_kind'}
+               'field_in_kind', 'field_out_kind', 'field_overtime_state'}
+# Working day of the field staff (hours, local time), editable in Ajustes › Técnico › Parámetros del sistema.
+SCHEDULE_DEFAULTS = {
+    'day_start': 7.0,       # Remote_Attendance.day_start: hours before this are not counted
+    'day_end': 17.0,        # Remote_Attendance.day_end: hours after this count only as approved overtime
+    'lunch_hours': 1.0,     # Remote_Attendance.lunch_hours: deducted when the lunch was not marked
+    'overtime_after': 1.0,  # Remote_Attendance.overtime_after: exits this long after day_end ask for overtime
+}
+# Without lunch marks, the lunch is deducted only from attendances at least this long.
+LUNCH_MIN_HOURS = 6.0
+
+
+def float_to_time(value):
+    hours = int(value)
+    return time(hours, int(round((value - hours) * 60)) % 60)
 
 
 class HrAttendance(models.Model):
@@ -40,6 +56,15 @@ class HrAttendance(models.Model):
     out_face_distance = fields.Float("Distancia facial salida", digits=(4, 3), readonly=True)
     in_gps_distance = fields.Integer("Distancia a la obra entrada (m)", readonly=True)
     out_gps_distance = fields.Integer("Distancia a la obra salida (m)", readonly=True)
+    field_overtime_state = fields.Selection([
+        ('pending', "Por validar"),
+        ('approved', "Aprobado"),
+        ('rejected', "Rechazado"),
+    ], string="Tiempo extra", tracking=True, index=True, copy=False,
+        help="Al salir más tarde del horario, el supervisor indicó que es tiempo extra. "
+             "Esas horas se cargan al proyecto solo cuando se aprueban.")
+    field_regular_hours = fields.Float("Horas en horario", compute='_compute_field_hours')
+    field_overtime_hours = fields.Float("Horas extra", compute='_compute_field_hours')
     field_allocation_ids = fields.One2many(
         'hr.field.allocation', 'attendance_id', string="Reparto por proyecto",
         help="Cuando la asistencia viene de una lista de WhatsApp, cómo se reparte el día entre proyectos.")
@@ -54,6 +79,59 @@ class HrAttendance(models.Model):
                 continue
             tz = pytz.timezone(attendance.employee_id._get_tz() or 'UTC')
             attendance.field_date = pytz.utc.localize(attendance.check_in).astimezone(tz).date()
+
+    @api.model
+    def _field_schedule(self):
+        params = self.env['ir.config_parameter'].sudo()
+        schedule = {}
+        for key, default in SCHEDULE_DEFAULTS.items():
+            try:
+                schedule[key] = float(params.get_param(f'Remote_Attendance.{key}') or default)
+            except ValueError:
+                schedule[key] = default
+        return schedule
+
+    def _field_day_bounds(self, schedule=None):
+        """Start and end of the working day of the check-in, as naive UTC datetimes."""
+        self.ensure_one()
+        schedule = schedule or self._field_schedule()
+        tz = pytz.timezone(self.employee_id._get_tz() or 'UTC')
+        day = pytz.utc.localize(self.check_in).astimezone(tz).date()
+
+        def to_utc(hour):
+            return tz.localize(datetime.combine(day, float_to_time(hour))).astimezone(pytz.utc).replace(tzinfo=None)
+        return to_utc(schedule['day_start']), to_utc(schedule['day_end'])
+
+    def _field_needs_overtime_question(self, when):
+        """True when leaving at ``when`` is late enough to ask whether it is overtime."""
+        self.ensure_one()
+        schedule = self._field_schedule()
+        _start, end = self._field_day_bounds(schedule)
+        return when >= end + timedelta(hours=schedule['overtime_after'])
+
+    @api.depends('check_in', 'check_out', 'field_in_kind', 'field_out_kind', 'employee_id')
+    def _compute_field_hours(self):
+        schedule = self._field_schedule()
+        for attendance in self:
+            if not (attendance.check_in and attendance.check_out):
+                attendance.field_regular_hours = attendance.field_overtime_hours = 0.0
+                continue
+            start, end = attendance._field_day_bounds(schedule)
+            begin = max(attendance.check_in, start)
+            finish = min(attendance.check_out, end)
+            regular = max(0.0, (finish - begin).total_seconds() / 3600)
+            lunch_marked = attendance.field_in_kind == 'lunch' or attendance.field_out_kind == 'lunch'
+            if not lunch_marked and regular >= LUNCH_MIN_HOURS:
+                regular -= schedule['lunch_hours']
+            overtime = (attendance.check_out - max(attendance.check_in, end)).total_seconds() / 3600
+            attendance.field_regular_hours = regular
+            attendance.field_overtime_hours = max(0.0, overtime)
+
+    def action_field_overtime_approve(self):
+        self.filtered('field_overtime_state').write({'field_overtime_state': 'approved'})
+
+    def action_field_overtime_reject(self):
+        self.filtered('field_overtime_state').write({'field_overtime_state': 'rejected'})
 
     def _field_add_review_reason(self, reason):
         for attendance in self:
@@ -103,10 +181,11 @@ class HrAttendance(models.Model):
                 wanted[allocation.project_id] = wanted.get(allocation.project_id, 0.0) + allocation.hours
             return wanted
         if self.field_project_id:
-            if self.field_in_kind == 'lunch' or self.field_out_kind == 'lunch':
-                # The lunch was marked: Odoo would also deduct the schedule's lunch break.
-                return {self.field_project_id: (self.check_out - self.check_in).total_seconds() / 3600}
-            return {self.field_project_id: self.worked_hours}
+            # Only the working day (7 to 5 by default) counts, without lunch; later hours only as approved overtime.
+            hours = self.field_regular_hours
+            if self.field_overtime_state == 'approved':
+                hours += self.field_overtime_hours
+            return {self.field_project_id: hours}
         return {}
 
     def _field_sync_timesheet(self):

@@ -114,13 +114,15 @@
     // Pase de lista (supervisor): palomear quién vino, sin cámara
     // ------------------------------------------------------------------
 
-    let mode = "roll";
+    // El pase de lista queda escondido: el enlace del supervisor abre directo en la cámara.
+    const ROLL_ENABLED = false;
+    let mode = ROLL_ENABLED ? "roll" : "camera";
     let roll = null;
     let people = [];
 
     function setMode(value) {
         mode = value;
-        $("btn-mode").hidden = false;
+        $("btn-mode").hidden = !ROLL_ENABLED;
         if (mode === "roll") {
             show("screen-roll");
             $("btn-mode").textContent = "Cámara";
@@ -365,6 +367,7 @@
             $("camera-hint").textContent = "Cargando reconocimiento facial…";
             await loadModels();
             setPunchEnabled(true);
+            $("btn-enroll").hidden = !state.can_enroll;
             if (isOffice) {
                 startOfficeLoop();
             } else {
@@ -419,6 +422,12 @@
             chooseProject();
             return;
         }
+        if (result.need_overtime) {
+            $("overtime-text").textContent = result.employee
+                + " sale más de una hora después del horario. Si es tiempo extra, se envía a validar.";
+            openPanel("panel-overtime");
+            return;
+        }
         if (result.need_pin && !isOffice) {
             askPin();
             return;
@@ -436,6 +445,9 @@
         let message = verb + ": " + result.employee + (result.project ? " · " + result.project : "");
         if (result.state === "review") {
             message += " (en revisión: " + (result.reasons || []).join(", ") + ")";
+        }
+        if (result.overtime) {
+            message += " · tiempo extra enviado a validar";
         }
         toast(message, result.state === "review" ? "warning" : "success", 6000);
     }
@@ -515,7 +527,7 @@
     function startOfficeLoop() {
         $("camera-hint").textContent = "Mira a la cámara";
         const tick = async () => {
-            if (!busy && Date.now() >= officePauseUntil && $("panel-pin").hidden) {
+            if (!busy && !enrolling && Date.now() >= officePauseUntil && $("panel-pin").hidden) {
                 busy = true;
                 try {
                     const descriptor = await detect($("video"), 1);
@@ -564,6 +576,119 @@
                 buffer += event.key;
             }
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Registrar rostro desde el enlace (supervisor o tablet de oficina)
+    // ------------------------------------------------------------------
+
+    let enrolling = false;
+    let enrollShots = [];
+    let enrollPhoto = null;
+
+    function renderEnrollOptions() {
+        const query = plain($("enroll-search").value.trim());
+        const select = $("enroll-employee");
+        select.replaceChildren();
+        const people = (state.crew || []).filter((p) => !p.face && (!query || plain(personLabel(p)).includes(query)));
+        for (const person of people) {
+            const option = document.createElement("option");
+            option.value = person.id;
+            option.textContent = personLabel(person);
+            select.appendChild(option);
+        }
+        if (!people.length) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = query ? "Nadie sin rostro con ese nombre" : "Todos ya tienen rostro registrado";
+            select.appendChild(option);
+        }
+    }
+
+    function updateEnroll() {
+        $("enroll-count").textContent = "Fotos: " + enrollShots.length + (enrollShots.length < 3 ? " de 3" : "");
+        $("enroll-save").disabled = !enrollShots.length;
+    }
+
+    function openEnroll() {
+        enrolling = true;
+        enrollShots = [];
+        enrollPhoto = null;
+        $("enroll-search").value = "";
+        $("enroll-consent").checked = false;
+        $("enroll-pin").value = "";
+        renderEnrollOptions();
+        updateEnroll();
+        $("enroll-box").hidden = false;
+        $("punch-kinds").hidden = true;
+        $("btn-enroll").hidden = true;
+        $("camera-hint").textContent = "Pon al empleado frente a la cámara y toca Tomar foto";
+    }
+
+    function closeEnroll() {
+        enrolling = false;
+        $("enroll-box").hidden = true;
+        $("punch-kinds").hidden = isOffice;
+        $("btn-enroll").hidden = false;
+        $("camera-hint").textContent = isOffice ? "Mira a la cámara" : "Ponte frente a la cámara y toca lo que vas a marcar";
+    }
+
+    async function enrollShot() {
+        $("enroll-shot").disabled = true;
+        try {
+            const descriptor = await detect($("video"), 4);
+            if (!descriptor) {
+                toast("No se detectó una cara. Acércate y busca buena luz.", "error");
+                return;
+            }
+            if (!enrollPhoto) {
+                enrollPhoto = snapshot($("video"), $("canvas"));
+            }
+            enrollShots.push(descriptor);
+            updateEnroll();
+        } catch (error) {
+            toast(error.message, "error", 6000);
+        } finally {
+            $("enroll-shot").disabled = false;
+        }
+    }
+
+    async function enrollSave() {
+        const employeeId = Number($("enroll-employee").value);
+        if (!employeeId) {
+            toast("Elige al empleado", "error");
+            return;
+        }
+        if (!$("enroll-consent").checked) {
+            toast("Marca que el empleado firmó el consentimiento.", "error");
+            return;
+        }
+        try {
+            const result = await rpc(base + "/rostro", {
+                device_key: deviceKey,
+                pin: $("enroll-pin").value,
+                employee_id: employeeId,
+                descriptors: enrollShots,
+                photo: enrollPhoto,
+                consent: true,
+            });
+            if (result.error) {
+                toast(result.error, "error", 7000);
+                return;
+            }
+            const person = (state.crew || []).find((p) => p.id === employeeId);
+            if (person) {
+                person.face = true;
+            }
+            toast("Rostro de " + result.employee + " guardado", "success", 6000);
+            enrollShots = [];
+            enrollPhoto = null;
+            $("enroll-consent").checked = false;
+            renderEnrollOptions();
+            updateEnroll();
+        } catch (error) {
+            toast(error.message, "error", 6000);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -746,6 +871,21 @@
     }
     $("btn-change").addEventListener("click", () => punch(null, true));
     $("btn-lunch").addEventListener("click", openLunch);
+    $("btn-enroll").addEventListener("click", openEnroll);
+    $("enroll-close").addEventListener("click", closeEnroll);
+    $("enroll-shot").addEventListener("click", enrollShot);
+    $("enroll-save").addEventListener("click", enrollSave);
+    $("enroll-search").addEventListener("input", renderEnrollOptions);
+    for (const [id, answer] of [["btn-overtime-yes", true], ["btn-overtime-no", false]]) {
+        $(id).addEventListener("click", async () => {
+            closePanel("panel-overtime");
+            try {
+                await send({ overtime: answer });
+            } catch (error) {
+                toast(error.message, "error", 6000);
+            }
+        });
+    }
     $("btn-lunch-save").addEventListener("click", saveLunch);
     $("btn-office-pin").addEventListener("click", () => {
         pending = { device_key: deviceKey };

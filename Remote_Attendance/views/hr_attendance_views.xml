@@ -12,6 +12,13 @@
                         <field name="field_supervisor_id"/>
                         <field name="field_in_kind" invisible="not field_in_kind"/>
                         <field name="field_out_kind" invisible="not field_out_kind"/>
+                        <field name="field_regular_hours" widget="float_time" invisible="not check_out"/>
+                        <field name="field_overtime_hours" widget="float_time" invisible="not field_overtime_state"/>
+                        <field name="field_overtime_state" readonly="1" invisible="not field_overtime_state"/>
+                        <div colspan="2" groups="Remote_Attendance.group_field_operations" invisible="field_overtime_state != 'pending'">
+                            <button name="action_field_overtime_approve" type="object" string="Aprobar tiempo extra" class="btn-primary"/>
+                            <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra" class="btn-secondary"/>
+                        </div>
                         <field name="field_state" readonly="1"/>
                         <field name="field_review_reason" invisible="not field_review_reason"/>
                         <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"/>
@@ -75,6 +82,8 @@
                 <header>
                     <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"/>
                     <button name="action_field_reject" type="object" string="Rechazar"/>
+                    <button name="action_field_overtime_approve" type="object" string="Aprobar tiempo extra"/>
+                    <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra"/>
                 </header>
                 <field name="employee_id" widget="many2one_avatar_employee"/>
                 <field name="field_project_id"/>
@@ -83,7 +92,11 @@
                 <field name="field_in_kind" optional="show"/>
                 <field name="check_out"/>
                 <field name="field_out_kind" optional="show"/>
-                <field name="worked_hours" widget="float_time"/>
+                <field name="field_regular_hours" widget="float_time" string="Horas"/>
+                <field name="field_overtime_hours" widget="float_time" optional="show"/>
+                <field name="field_overtime_state" optional="show" widget="badge"
+                       decoration-warning="field_overtime_state == 'pending'" decoration-success="field_overtime_state == 'approved'"
+                       decoration-danger="field_overtime_state == 'rejected'"/>
                 <field name="in_gps_distance" optional="show"/>
                 <field name="field_review_reason" optional="show"/>
                 <field name="field_state" widget="badge"
@@ -104,6 +117,7 @@
                 <field name="field_supervisor_id"/>
                 <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
                 <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
+                <filter name="overtime" string="Tiempo extra por validar" domain="[('field_overtime_state', '=', 'pending')]"/>
                 <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
                 <group>
@@ -125,6 +139,21 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
             <p>Aquí aparecen los marcajes fuera de obra, sin GPS, hechos con PIN o con la comida registrada después.</p>
+        </field>
+    </record>
+
+    <record id="Remote_Attendance_overtime_action" model="ir.actions.act_window">
+        <field name="name">Tiempo extra por validar</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_overtime_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_overtime': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nada por validar</p>
+            <p>Aquí aparecen las salidas de más de una hora después del horario que el supervisor marcó como tiempo extra.
+               Las horas extra se cargan al proyecto al aprobarlas.</p>
         </field>
     </record>
 </odoo>

@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="action_field_enroll_photos" model="ir.actions.act_url">
+        <field name="name">Registrar rostros con foto</field>
+        <field name="url">/campo/enrolar/fotos</field>
+        <field name="target">new</field>
+    </record>
     <menuitem id="menu_field_root" name="Campo" parent="hr_attendance.menu_hr_attendance_root"
               sequence="8" groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="menu_field_roster_import" name="Cargar lista de WhatsApp" parent="menu_field_root" sequence="0"
               action="hr_field_roster_import_action"/>
     <menuitem id="menu_field_review" name="Marcajes" parent="menu_field_root" sequence="1"
               action="Remote_Attendance_review_action"/>
+    <menuitem id="menu_field_overtime" name="Tiempo extra por validar" parent="menu_field_root" sequence="1"
+              action="Remote_Attendance_overtime_action"/>
     <menuitem id="menu_field_employees" name="Personal de campo" parent="menu_field_root" sequence="2"
               action="hr_employee_field_action"/>
+    <menuitem id="menu_field_enroll_photos" name="Registrar rostros con foto" parent="menu_field_root" sequence="2"
+              action="action_field_enroll_photos"/>
     <menuitem id="menu_field_projects" name="Obras" parent="menu_field_root" sequence="3"
               action="project_project_field_action"/>
     <menuitem id="menu_field_devices" name="Teléfonos" parent="menu_field_root" sequence="4"

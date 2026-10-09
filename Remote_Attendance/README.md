@@ -45,6 +45,33 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
   en revisión para que RH capture la salida.
 - Cuando la comida está marcada, las horas del proyecto son las reales (no se descuenta además la hora de comida del horario).
 
+## Horario, comida y tiempo extra
+
+- Las horas del proyecto se cuentan solo dentro del horario: de **7:00 a 17:00** (hora del empleado; revisa que su
+  zona horaria sea *America/Mexico_City*). Llegar antes de las 7 no suma.
+- La comida no se cuenta: si se marcó, queda fuera sola; si no se marcó, se descuenta **1 hora** de jornadas de 6 horas o más.
+- Si alguien sale **una hora o más después** del horario (18:00 o más), el teléfono pregunta **¿Es tiempo extra?**
+  - *Sí*: la salida queda con tiempo extra **por validar** (*Asistencias › Campo › Tiempo extra por validar*).
+    Las horas normales se cargan de inmediato y las extra al aprobarlas.
+  - *No*: solo cuenta hasta las 17:00.
+  - En la tablet de oficina nadie contesta: una salida tarde queda por validar.
+- Se puede cambiar en *Ajustes › Técnico › Parámetros del sistema*: `Remote_Attendance.day_start` (7),
+  `Remote_Attendance.day_end` (17), `Remote_Attendance.lunch_hours` (1) y `Remote_Attendance.overtime_after` (1).
+
+## Registrar rostros sin cuenta de Odoo
+
+- **Desde el enlace del supervisor o la tablet de oficina**: botón *Registrar rostro de un empleado*. Se elige a la
+  persona (solo salen quienes aún no tienen rostro), se palomea el consentimiento, se toman 3 fotos y se confirma con
+  el PIN del dueño del enlace. Queda guardado quién lo registró; reemplazar un rostro lo hace Operaciones en Odoo
+  (*Borrar rostros* y registrar de nuevo).
+- **Con la foto de la ficha** (*Asistencias › Campo › Registrar rostros con foto*): registra de golpe a todos los que
+  tienen foto y aún no tienen rostro. Con una sola foto reconoce menos; a quien no reconozca, agréguenle 3 fotos en vivo.
+
+## Enlace del supervisor
+
+Abre directo en la cámara (el pase de lista queda escondido). Si el supervisor tiene **una sola obra asignada**, queda
+activa sola; con varias, elige las del día en *Obras de hoy*.
+
 ## Clave del empleado
 
 La clave es el **Número de registro del empleado** (pestaña Nómina), la misma de nómina. Si un empleado

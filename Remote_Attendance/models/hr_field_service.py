@@ -1,5 +1,6 @@
 import base64
 import binascii
+import json
 import math
 from datetime import timedelta
 
@@ -99,8 +100,9 @@ class HrFieldService(models.AbstractModel):
             'active_projects': self._project_payload(active),
             'assignable_projects': self._project_payload(owner.field_project_ids)
             if owner.field_role == 'supervisor' else [],
-            'crew': [{'id': e.id, 'name': e.name, 'key': e.field_key or ''}
+            'crew': [{'id': e.id, 'name': e.name, 'key': e.field_key or '', 'face': bool(e.field_face_ids)}
                      for e in owner._field_candidates().sorted('name')],
+            'can_enroll': owner.field_role in ('supervisor', 'office'),
             'days': [day.isoformat() for day in self._roll_days(owner)]
             if owner.field_role == 'supervisor' else [],
         }
@@ -186,11 +188,12 @@ class HrFieldService(models.AbstractModel):
     @api.model
     def _punch(self, owner, device, descriptor=None, employee_id=None, pin=None,
                project_id=None, latitude=None, longitude=None, photo=None, change_project=False,
-               kind=None, badge=None):
+               kind=None, badge=None, overtime=None):
         """Mark the recognised employee.
 
         ``kind`` is the button the supervisor pressed: ``in`` (entrada en obra), ``lunch_out``,
         ``lunch_in`` or ``out``; without it, it toggles entrance/exit.
+        ``overtime`` answers "¿Es tiempo extra?", asked when leaving late (``need_overtime``).
         Returns a dict for the kiosk: ``error`` or ``employee``, ``action``,
         ``project``, ``state`` and ``reasons``."""
         if kind and kind not in PUNCH_KINDS:
@@ -224,8 +227,14 @@ class HrFieldService(models.AbstractModel):
                 if error:
                     return error
                 attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
+            out_kind = 'lunch' if kind == 'lunch_out' else 'day'
+            overtime_state = False
+            if out_kind == 'day' and attendance._field_needs_overtime_question(fields.Datetime.now()):
+                if overtime is None:
+                    return {'need_overtime': True, 'employee': employee.name}
+                overtime_state = 'pending' if overtime else False
             return self._check_out(attendance, device, geo, face_distance, photo, reasons, has_gps,
-                                   out_kind='lunch' if kind == 'lunch_out' else 'day')
+                                   out_kind=out_kind, overtime_state=overtime_state)
 
         project, error = self._pick_project(leader, project_id)
         if error:
@@ -282,8 +291,10 @@ class HrFieldService(models.AbstractModel):
                     'state': attendance.field_state,
                     'reasons': [],
                 }
+            # Nobody answers on the office tablet: a late exit goes to HR as overtime to validate.
+            late = attendance._field_needs_overtime_question(now)
             return self._check_out(attendance, device, geo, face_distance, photo, reasons, True,
-                                   check_geofence=False, out_kind='day')
+                                   check_geofence=False, out_kind='day', overtime_state='pending' if late else False)
         vals = {
             'employee_id': employee.id,
             'check_in': now,
@@ -307,6 +318,37 @@ class HrFieldService(models.AbstractModel):
         }
 
     @api.model
+    def _enroll(self, owner, device, pin, employee_id, descriptors, photo=None, consent=False):
+        """Register the reference face of an employee from a supervisor's phone or the office tablet.
+        Only employees without a face: replacing one is done by Operaciones in Odoo."""
+        if owner.field_role not in ('supervisor', 'office'):
+            raise UserError(_("Este enlace no puede registrar rostros."))
+        if not owner._field_check_pin(pin):
+            return {'error': _("PIN incorrecto.")}
+        employee = owner._field_candidates().filtered(lambda e: e.id == int(employee_id or 0))
+        if not employee:
+            raise UserError(_("Esa persona no es personal de campo."))
+        if employee.field_face_ids:
+            return {'error': _("%s ya tiene rostro registrado. Para cambiarlo, Operaciones debe borrar sus rostros en Odoo.",
+                               employee.name)}
+        if not consent and not employee.field_face_consent_date:
+            return {'error': _("Falta el consentimiento firmado del empleado.")}
+        if not descriptors or len(descriptors) > 10:
+            return {'error': _("Toma entre 1 y 10 fotos.")}
+        vectors = [parse_descriptor(descriptor) for descriptor in descriptors]
+        if not employee.field_face_consent_date:
+            employee.field_face_consent_date = employee._field_today()
+        image = clean_photo(photo)
+        self.env['hr.field.face'].create([{
+            'employee_id': employee.id,
+            'descriptor': json.dumps(vector),
+            'image': image if index == 0 else False,
+            'enrolled_by_id': owner.id,
+            'device_id': device.id,
+        } for index, vector in enumerate(vectors)])
+        return {'employee': employee.name, 'count': len(employee.field_face_ids)}
+
+    @api.model
     def _gps_check(self, project, latitude, longitude, has_gps, reasons):
         if not has_gps:
             reasons.append(_("Sin ubicación GPS"))
@@ -320,7 +362,7 @@ class HrFieldService(models.AbstractModel):
 
     @api.model
     def _check_out(self, attendance, device, geo, face_distance, photo, reasons, has_gps, check_geofence=True,
-                   out_kind='day'):
+                   out_kind='day', overtime_state=False):
         gps_distance = 0
         if attendance.field_project_id and check_geofence:
             gps_distance = self._gps_check(
@@ -328,6 +370,7 @@ class HrFieldService(models.AbstractModel):
         vals = {
             'check_out': fields.Datetime.now(),
             'field_out_kind': out_kind,
+            'field_overtime_state': overtime_state,
             'out_field_device_id': device.id,
             'out_field_photo': photo,
             'out_face_distance': face_distance or 0.0,
@@ -346,4 +389,5 @@ class HrFieldService(models.AbstractModel):
             'project': attendance.field_project_id.display_name or '',
             'state': attendance.field_state,
             'reasons': reasons,
+            'overtime': bool(overtime_state),
         }

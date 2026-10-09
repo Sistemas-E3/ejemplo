@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from freezegun import freeze_time
+
 from odoo import fields
 from odoo.exceptions import UserError
 from odoo.tests import HttpCase, TransactionCase, tagged
@@ -7,11 +9,15 @@ from odoo.tests import HttpCase, TransactionCase, tagged
 from ..models.hr_field_service import gps_distance_m
 
 
+TZ = 'Europe/Brussels'
+
+
 def vector(base):
     return [base] + [0.0] * 127
 
 
 @tagged('post_install', '-at_install')
+@freeze_time('2026-09-28 10:00:00')  # Monday 12:00 in Brussels, inside the working day
 class TestFieldAttendance(TransactionCase):
 
     @classmethod
@@ -26,11 +32,11 @@ class TestFieldAttendance(TransactionCase):
         })
         cls.project_other = cls.env['project.project'].create({'name': 'Obra ajena'})
         cls.supervisor = cls.env['hr.employee'].create({
-            'name': 'Juan Supervisor', 'field_role': 'supervisor', 'pin': '1234',
+            'name': 'Juan Supervisor', 'field_role': 'supervisor', 'tz': TZ, 'pin': '1234',
             'field_project_ids': [(6, 0, (cls.project_a | cls.project_b).ids)],
         })
         cls.worker = cls.env['hr.employee'].create({
-            'name': 'Pedro Trabajador', 'field_role': 'worker', 'pin': '5678',
+            'name': 'Pedro Trabajador', 'field_role': 'worker', 'tz': TZ, 'pin': '5678',
             'field_supervisor_id': cls.supervisor.id,
         })
         cls.env['hr.field.face'].create([
@@ -101,7 +107,7 @@ class TestFieldAttendance(TransactionCase):
         self.assertEqual(len(line), 1)
         self.assertEqual(line.project_id, self.project_a)
         self.assertEqual(line.employee_id, self.worker)
-        self.assertAlmostEqual(line.unit_amount, attendance.worked_hours, places=2)
+        self.assertAlmostEqual(line.unit_amount, 5, places=2, msg="From 7:00 (not 4:00) to 12:00")
         self.assertEqual(line.field_attendance_id, attendance)
 
     def test_unknown_face_asks_pin(self):

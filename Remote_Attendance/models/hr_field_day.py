@@ -12,7 +12,7 @@ ROLL_FRACTIONS = (0.5, 1.0)
 # Exit data moved to the after-lunch attendance when a closed day is split.
 LUNCH_COPY_FIELDS = (
     'check_out', 'field_out_kind', 'out_face_distance', 'out_gps_distance', 'out_latitude', 'out_longitude',
-    'out_mode', 'out_ip_address', 'out_browser', 'out_city', 'out_country_name',
+    'out_mode', 'out_ip_address', 'out_browser', 'out_city', 'out_country_name', 'field_overtime_state',
 )
 
 
@@ -299,6 +299,7 @@ class HrFieldService(models.AbstractModel):
         attendance.write({
             'check_out': start,
             'field_out_kind': 'lunch',
+            'field_overtime_state': False,
             'field_project_id': project.id,
             'field_state': 'review' if attendance.field_state in ('valid', 'approved', False) else attendance.field_state,
             'out_field_device_id': False,

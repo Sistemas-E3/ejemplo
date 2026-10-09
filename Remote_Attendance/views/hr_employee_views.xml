@@ -45,6 +45,14 @@
                             </div>
                         </group>
                     </group>
+                    <field name="field_face_ids" invisible="not field_face_count" readonly="1">
+                        <list>
+                            <field name="image" widget="image" options="{'size': [48, 48]}"/>
+                            <field name="create_date" string="Registrado el"/>
+                            <field name="enrolled_by_id"/>
+                            <field name="device_id" optional="hide"/>
+                        </list>
+                    </field>
                     <field name="field_crew_ids" invisible="field_role != 'supervisor'" readonly="1">
                         <list>
                             <field name="field_key"/>

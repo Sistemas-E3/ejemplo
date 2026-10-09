@@ -75,6 +75,12 @@ body {
 .fk-office-result.ok { background: var(--fk-success); }
 .fk-office-result.warn { background: var(--fk-warning); }
 .fk-office-result.bad { background: var(--fk-error); }
+.fk-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; flex: none; }
+.fk-name { flex: 1; }
+.fk-status { color: var(--fk-muted); }
+.fk-status.ok { color: var(--fk-success); font-weight: 600; }
+.fk-status.bad { color: var(--fk-error); font-weight: 600; }
+#enroll-box p { color: var(--fk-muted); }
 .fk-toast { position: fixed; left: 16px; right: 16px; bottom: 16px; padding: 14px 16px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 20; }
 .fk-toast[hidden] { display: none; }
 .fk-toast-success { background: var(--fk-success); }

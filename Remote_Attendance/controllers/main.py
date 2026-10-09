@@ -102,7 +102,7 @@ class FieldAttendance(http.Controller):
     @http.route('/campo/<string:token>/punch', type='json', auth='public')
     def punch(self, token, device_key=None, descriptor=None, employee_id=None, pin=None,
               project_id=None, latitude=None, longitude=None, photo=None, change_project=False,
-              kind=None, badge=None):
+              kind=None, badge=None, overtime=None):
         owner = self._owner(token)
         device = owner and self._approved_device(owner, device_key)
         if not device:
@@ -112,7 +112,18 @@ class FieldAttendance(http.Controller):
             descriptor=descriptor, employee_id=employee_id, pin=pin, project_id=project_id,
             latitude=latitude, longitude=longitude, photo=photo, change_project=bool(change_project),
             kind=kind or None, badge=(str(badge).strip()[:32] or None) if badge else None,
+            overtime=None if overtime is None else bool(overtime),
         )
+
+    @http.route('/campo/<string:token>/rostro', type='json', auth='public')
+    def enroll_from_link(self, token, device_key=None, pin=None, employee_id=None, descriptors=None,
+                         photo=None, consent=False):
+        owner = self._owner(token)
+        device = owner and self._approved_device(owner, device_key)
+        if not device:
+            return {'error': _("Teléfono no autorizado.")}
+        return self._safe(self._service()._enroll, owner, device, pin, employee_id, descriptors,
+                          photo=photo, consent=bool(consent))
 
     @http.route('/campo/<string:token>/comida', type='json', auth='public')
     def late_lunch(self, token, device_key=None, pin=None, employee_id=None, date=None,
@@ -151,6 +162,24 @@ class FieldAttendance(http.Controller):
         if not employee:
             raise AccessError(_("Empleado no encontrado."))
         return employee
+
+    @http.route('/campo/enrolar/fotos', type='http', auth='user', sitemap=False)
+    def enroll_photos_page(self):
+        """Register the faces of all the field staff from the photo of their employee record."""
+        if not request.env.user.has_group('Remote_Attendance.group_field_operations'):
+            raise AccessError(_("Solo Operaciones puede registrar rostros."))
+        staff = request.env['hr.employee']._field_staff().sorted('name')
+        # Employees without a photo get a generated SVG avatar: only real pictures are useful.
+        photos = request.env['ir.attachment'].sudo().search([
+            ('res_model', '=', 'hr.employee'), ('res_field', '=', 'image_1920'),
+            ('res_id', 'in', staff.ids), ('mimetype', '!=', 'image/svg+xml'),
+        ])
+        with_photo = set(photos.mapped('res_id'))
+        return request.render('Remote_Attendance.field_enroll_photos_page', {
+            'pending': staff.filtered(lambda e: e.id in with_photo and not e.field_face_ids),
+            'without_photo': staff.filtered(lambda e: e.id not in with_photo and not e.field_face_ids),
+            'done_count': len(staff.filtered('field_face_ids')),
+        })
 
     @http.route('/campo/enrolar/<int:employee_id>', type='http', auth='user', sitemap=False)
     def enroll_page(self, employee_id):

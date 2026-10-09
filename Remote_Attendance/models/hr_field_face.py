@@ -28,6 +28,10 @@ class HrFieldFace(models.Model):
     descriptor = fields.Text(
         required=True, help="Huella facial: 128 números calculados por face-api en el navegador.")
     image = fields.Image("Foto de registro", max_width=512, max_height=512, attachment=True)
+    enrolled_by_id = fields.Many2one(
+        'hr.employee', "Registró", readonly=True,
+        help="Supervisor o kiosco que registró el rostro desde su enlace; vacío si lo registró Operaciones en Odoo.")
+    device_id = fields.Many2one('hr.field.device', "Teléfono", readonly=True)
 
     @api.constrains('descriptor')
     def _check_descriptor(self):

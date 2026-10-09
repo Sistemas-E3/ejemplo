@@ -119,10 +119,11 @@ class HrEmployee(models.Model):
         return self if self.field_role == 'supervisor' else self.field_supervisor_id
 
     def _field_active_projects(self):
-        """Today's active projects of this supervisor, limited to the ones assigned to him."""
+        """Today's active projects of this supervisor, limited to the ones assigned to him.
+        A supervisor with a single assigned project does not need to activate it."""
         self.ensure_one()
         if self.field_active_date != self._field_today():
-            return self.env['project.project']
+            return self.field_project_ids if len(self.field_project_ids) == 1 else self.env['project.project']
         return self.field_active_project_ids & self.field_project_ids
 
     @api.model

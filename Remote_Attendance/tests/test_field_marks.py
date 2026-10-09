@@ -4,9 +4,18 @@ import pytz
 
 from odoo import fields
 from odoo.exceptions import UserError
+from freezegun import freeze_time
+
 from odoo.tests import HttpCase, TransactionCase, tagged
 
 from ..models.hr_field_roster import clean_line, parse_message
+
+
+# Monday 28/09/2026, 12:00 in Brussels (the timezone of the test employees).
+DAY = datetime(2026, 9, 28).date()
+
+
+TZ = 'Europe/Brussels'
 
 
 def vector(base):
@@ -14,6 +23,7 @@ def vector(base):
 
 
 @tagged('post_install', '-at_install')
+@freeze_time('2026-09-28 10:00:00')
 class TestFieldMarks(TransactionCase):
     """Office entrance, the four marks of the day and lunch registered later."""
 
@@ -29,22 +39,22 @@ class TestFieldMarks(TransactionCase):
             'name': 'Obra B', 'field_latitude': 19.5, 'field_longitude': -99.2, 'field_radius': 200,
         })
         cls.supervisor = cls.env['hr.employee'].create({
-            'name': 'Juan Supervisor', 'field_role': 'supervisor', 'pin': '1234',
+            'name': 'Juan Supervisor', 'field_role': 'supervisor', 'tz': TZ, 'pin': '1234',
             'field_project_ids': [(6, 0, cls.project_a.ids)],
         })
         cls.other_supervisor = cls.env['hr.employee'].create({
-            'name': 'Luis Supervisor', 'field_role': 'supervisor', 'pin': '4321',
+            'name': 'Luis Supervisor', 'field_role': 'supervisor', 'tz': TZ, 'pin': '4321',
             'field_project_ids': [(6, 0, cls.project_b.ids)],
         })
         cls.worker = cls.env['hr.employee'].create({
-            'name': 'Pedro Trabajador', 'field_role': 'worker', 'pin': '5678', 'barcode': '1042',
+            'name': 'Pedro Trabajador', 'field_role': 'worker', 'tz': TZ, 'pin': '5678', 'barcode': '1042',
             'field_supervisor_id': cls.supervisor.id,
         })
         cls.borrowed = cls.env['hr.employee'].create({
-            'name': 'Mario Prestado', 'field_role': 'worker', 'barcode': 'E-2001',
+            'name': 'Mario Prestado', 'field_role': 'worker', 'tz': TZ, 'barcode': 'E-2001',
             'field_supervisor_id': cls.other_supervisor.id,
         })
-        cls.office = cls.env['hr.employee'].create({'name': 'Tablet oficina', 'field_role': 'office', 'pin': '9999'})
+        cls.office = cls.env['hr.employee'].create({'name': 'Tablet oficina', 'field_role': 'office', 'tz': TZ, 'pin': '9999'})
         cls.env['hr.field.face'].create([
             {'employee_id': cls.worker.id, 'descriptor': str(vector(1.0))},
             {'employee_id': cls.borrowed.id, 'descriptor': str(vector(2.0))},
@@ -76,42 +86,119 @@ class TestFieldMarks(TransactionCase):
         tz = pytz.timezone(employee._get_tz() or 'UTC')
         return tz.localize(datetime.combine(day, time(hour))).astimezone(pytz.utc).replace(tzinfo=None)
 
+    def _at(self, hour, minute=0):
+        """Freeze the clock at ``hour`` local time of the test day."""
+        tz = pytz.timezone(self.worker._get_tz() or 'UTC')
+        local = tz.localize(datetime.combine(DAY, time(hour, minute)))
+        return freeze_time(local.astimezone(pytz.utc).replace(tzinfo=None))
+
+    def _hours(self, employee):
+        return sum(self._attendances(employee).field_timesheet_ids.mapped('unit_amount'))
+
     def test_four_marks(self):
-        result = self._office(descriptor=vector(1.01))
+        with self._at(6, 50):
+            result = self._office(descriptor=vector(1.01))
         self.assertEqual((result['employee'], result['action']), (self.worker.name, 'check_in'))
         entrance = self._attendances(self.worker)
         self.assertFalse(entrance.field_project_id, "The office entrance has no site yet")
         self.assertEqual(entrance.field_in_kind, 'office')
         self.assertEqual(entrance.field_supervisor_id, self.supervisor)
-        self.assertEqual(self._office(descriptor=vector(1.0))['action'], 'repeat',
-                         "A second scan at the office is ignored")
+        with self._at(7, 0):
+            self.assertEqual(self._office(descriptor=vector(1.0))['action'], 'repeat',
+                             "A second scan at the office is ignored")
         self.assertEqual(len(self._attendances(self.worker)), 1)
 
-        self._back(entrance, 5)
-        result = self._punch(self.supervisor, descriptor=vector(1.0), kind='in')
-        self.assertIn('error', result, "The entrance is already open")
-        result = self._punch(self.supervisor, descriptor=vector(1.0), kind='lunch_out')
+        with self._at(12, 0):
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='in')
+            self.assertIn('error', result, "The entrance is already open")
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='lunch_out')
         self.assertEqual(result['action'], 'lunch_out')
         self.assertEqual(entrance.field_project_id, self.project_a, "Hours go to the site where they mark")
         self.assertEqual(entrance.field_out_kind, 'lunch')
-        self.assertEqual(entrance.field_timesheet_ids.project_id, self.project_a)
-        # Lunch lasted an hour: move the morning back so the afternoon can start earlier.
-        entrance.write({'check_in': entrance.check_in - timedelta(hours=4),
-                        'check_out': entrance.check_out - timedelta(hours=4)})
+        self.assertAlmostEqual(entrance.field_timesheet_ids.unit_amount, 5, places=2,
+                               msg="Counted from 7:00, not from the 6:50 check-in")
 
-        self.assertIn('error', self._punch(self.supervisor, descriptor=vector(1.0), kind='out'))
-        result = self._punch(self.supervisor, descriptor=vector(1.0), kind='lunch_in')
+        with self._at(13, 0):
+            self.assertIn('error', self._punch(self.supervisor, descriptor=vector(1.0), kind='out'))
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='lunch_in')
         self.assertEqual(result['action'], 'lunch_in')
         after = self._attendances(self.worker)[-1]
         self.assertEqual((after.field_in_kind, after.field_project_id), ('lunch', self.project_a))
-        self._back(after, 3)
-        result = self._punch(self.supervisor, descriptor=vector(1.0), kind='out')
-        self.assertEqual(result['action'], 'check_out')
+        with self._at(17, 40):
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='out')
+        self.assertEqual(result['action'], 'check_out', "Less than an hour late: no overtime question")
         self.assertEqual(after.field_out_kind, 'day')
-        lines = self._attendances(self.worker).field_timesheet_ids
-        self.assertEqual(len(lines), 2)
-        self.assertAlmostEqual(sum(lines.mapped('unit_amount')), 8, delta=0.05,
-                               msg="Marked lunch: the schedule's lunch break is not deducted again")
+        self.assertFalse(after.field_overtime_state)
+        self.assertAlmostEqual(self._hours(self.worker), 9, places=2,
+                               msg="7 to 12 and 13 to 17: the lunch and the time after 17:00 are not counted")
+
+    def _day_until(self, hour, minute=0, **kwargs):
+        with self._at(7, 0):
+            self._punch(self.supervisor, descriptor=vector(1.0), kind='in')
+        with self._at(hour, minute):
+            return self._punch(self.supervisor, descriptor=vector(1.0), kind='out', **kwargs)
+
+    def test_overtime_question_yes(self):
+        result = self._day_until(18, 30)
+        self.assertTrue(result.get('need_overtime'))
+        attendance = self._attendances(self.worker)
+        self.assertFalse(attendance.check_out, "Nothing is saved until the question is answered")
+        with self._at(18, 30):
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='out', overtime=True)
+        self.assertTrue(result['overtime'])
+        self.assertEqual(attendance.field_overtime_state, 'pending')
+        self.assertAlmostEqual(attendance.field_overtime_hours, 1.5, places=2)
+        self.assertAlmostEqual(self._hours(self.worker), 9, places=2,
+                               msg="7 to 17 without the lunch hour; the overtime waits for validation")
+        attendance.action_field_overtime_approve()
+        self.assertAlmostEqual(self._hours(self.worker), 10.5, places=2)
+        attendance.action_field_overtime_reject()
+        self.assertAlmostEqual(self._hours(self.worker), 9, places=2)
+
+    def test_overtime_question_no(self):
+        self.assertTrue(self._day_until(19, 0).get('need_overtime'))
+        with self._at(19, 0):
+            result = self._punch(self.supervisor, descriptor=vector(1.0), kind='out', overtime=False)
+        self.assertFalse(result['overtime'])
+        self.assertFalse(self._attendances(self.worker).field_overtime_state)
+        self.assertAlmostEqual(self._hours(self.worker), 9, places=2)
+
+    def test_office_late_exit_goes_to_validation(self):
+        with self._at(7, 0):
+            self._office(descriptor=vector(1.0))
+        attendance = self._attendances(self.worker)
+        attendance.field_project_id = self.project_a
+        with self._at(18, 15):
+            self._office(descriptor=vector(1.0))
+        self.assertEqual(attendance.field_overtime_state, 'pending')
+
+    def test_single_assigned_project_is_active_without_activation(self):
+        self.other_supervisor.field_active_date = False
+        self.assertEqual(self.other_supervisor._field_active_projects(), self.project_b)
+        self.other_supervisor.field_project_ids |= self.project_a
+        self.assertFalse(self.other_supervisor._field_active_projects(), "With several sites it must choose")
+
+    def test_enroll_from_link(self):
+        device = self.devices[self.supervisor]
+        newcomer = self.env['hr.employee'].create({'name': 'Nuevo', 'field_role': 'worker'})
+        args = (self.supervisor, device)
+        self.assertEqual(self.service._enroll(*args, '0000', newcomer.id, [vector(3.0)], consent=True),
+                         {'error': 'PIN incorrecto.'})
+        self.assertIn('error', self.service._enroll(*args, '1234', newcomer.id, [vector(3.0)]), "Consent is required")
+        result = self.service._enroll(*args, '1234', newcomer.id, [vector(3.0), vector(3.01)], consent=True)
+        self.assertEqual(result['count'], 2)
+        self.assertEqual(newcomer.field_face_ids.enrolled_by_id, self.supervisor)
+        self.assertTrue(newcomer.field_face_consent_date)
+        self.assertIn('error', self.service._enroll(*args, '1234', newcomer.id, [vector(4.0)], consent=True),
+                      "Replacing a face is done by Operaciones")
+        with self.assertRaises(UserError):
+            self.service._enroll(*args, '1234', self.office.id, [vector(4.0)], consent=True)
+        other = self.env['hr.employee'].create({'name': 'Otro', 'field_role': 'worker'})
+        result = self.service._enroll(self.office, self.devices[self.office], '9999', other.id,
+                                      [vector(5.0)], consent=True)
+        self.assertEqual(result['employee'], 'Otro', "The office tablet can register faces too")
+        with self._at(7, 0):
+            self.assertEqual(self._punch(self.supervisor, descriptor=vector(3.02), kind='in')['employee'], 'Nuevo')
 
     def test_invalid_kind_and_exit_without_entrance(self):
         with self.assertRaises(UserError):
@@ -182,7 +269,8 @@ class TestFieldMarks(TransactionCase):
         self.assertIn('Comida registrada después', after.field_review_reason)
         self.assertFalse((before | after).field_timesheet_ids, "Hours wait for HR")
         (before | after).action_field_approve()
-        self.assertAlmostEqual(sum((before | after).field_timesheet_ids.mapped('unit_amount')), 9, places=2)
+        self.assertAlmostEqual(sum((before | after).field_timesheet_ids.mapped('unit_amount')), 8, places=2,
+                               msg="8 to 14 and 15 to 17: the hour after 17:00 is not overtime")
 
     def test_late_lunch_open_attendance(self):
         today = self.supervisor._field_today()
@@ -255,3 +343,17 @@ class TestFieldMarksRoutes(HttpCase):
         self.assertIn('error', result, "Only supervisors register lunch")
         result = self.make_jsonrpc_request(base + '/comida', {'device_key': 'nope'})
         self.assertEqual(result['error'], 'Teléfono no autorizado.')
+
+    def test_enroll_photos_page(self):
+        worker = self.env['hr.employee'].create({
+            'name': 'Con foto', 'field_role': 'worker',
+            'image_1920': 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        })
+        self.env['hr.employee'].create({'name': 'Sin foto', 'field_role': 'worker'})
+        self.authenticate('admin', 'admin')
+        response = self.url_open('/campo/enrolar/fotos')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'data-id="{worker.id}"', response.text)
+        self.assertIn('Sin foto', response.text)
+        self.make_jsonrpc_request(f'/campo/enrolar/{worker.id}/guardar', {'descriptors': [vector(6.0)], 'consent': True})
+        self.assertEqual(worker.field_face_count, 1)
