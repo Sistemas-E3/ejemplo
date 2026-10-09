@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_manual_load_view_form" model="ir.ui.view">
+        <field name="name">hr.field.manual.load.form</field>
+        <field name="model">hr.field.manual.load</field>
+        <field name="arch" type="xml">
+            <form string="Cargar asistencias a mano">
+                <group>
+                    <group>
+                        <field name="date"/>
+                        <field name="project_id" options="{'no_create': True}"/>
+                        <field name="supervisor_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="check_in" widget="float_time" string="Entrada de todos"/>
+                        <field name="check_out" widget="float_time" string="Salida de todos"/>
+                        <field name="present_count"/>
+                        <field name="total_hours" widget="float_time"/>
+                    </group>
+                </group>
+                <div class="text-muted mb-2">
+                    Palomea a quien asistió. Puedes cambiar la entrada y la salida de cada persona,
+                    o escribir sus horas trabajadas y Odoo ajusta la salida. La comida no se cuenta.
+                </div>
+                <field name="line_ids">
+                    <list editable="bottom" decoration-muted="not present">
+                        <field name="present" widget="boolean_toggle"/>
+                        <field name="employee_id" options="{'no_create': True}" required="present"/>
+                        <field name="check_in" widget="float_time"/>
+                        <field name="check_out" widget="float_time"/>
+                        <field name="lunch"/>
+                        <field name="hours" widget="float_time"/>
+                        <field name="overtime_hours" widget="float_time"/>
+                        <field name="project_id" options="{'no_create': True}" optional="hide"/>
+                    </list>
+                </field>
+                <footer>
+                    <button name="action_confirm" type="object" string="Cargar asistencias" class="btn-primary"/>
+                    <button name="action_add_field_staff" type="object" string="Agregar todo el personal de campo"
+                            class="btn-secondary"/>
+                    <button special="cancel" string="Cancelar"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_manual_load_action" model="ir.actions.act_window">
+        <field name="name">Cargar asistencias a mano</field>
+        <field name="res_model">hr.field.manual.load</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

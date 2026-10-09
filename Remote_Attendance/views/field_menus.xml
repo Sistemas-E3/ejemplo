@@ -9,6 +9,8 @@
               sequence="8" groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="menu_field_roster_import" name="Cargar lista de WhatsApp" parent="menu_field_root" sequence="0"
               action="hr_field_roster_import_action"/>
+    <menuitem id="menu_field_manual_load" name="Cargar asistencias a mano" parent="menu_field_root" sequence="0"
+              action="hr_field_manual_load_action"/>
     <menuitem id="menu_field_review" name="Marcajes" parent="menu_field_root" sequence="1"
               action="Remote_Attendance_review_action"/>
     <menuitem id="menu_field_overtime" name="Tiempo extra por validar" parent="menu_field_root" sequence="1"

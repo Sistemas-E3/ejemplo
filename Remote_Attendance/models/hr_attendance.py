@@ -11,7 +11,7 @@ FIELD_STATES = [
     ('rejected', "Rechazada"),
 ]
 SYNC_FIELDS = {'check_in', 'check_out', 'field_project_id', 'field_state', 'employee_id', 'field_allocation_ids',
-               'field_in_kind', 'field_out_kind', 'field_overtime_state'}
+               'field_in_kind', 'field_out_kind', 'field_overtime_state', 'field_skip_lunch'}
 # Working day of the field staff (hours, local time), editable in Ajustes › Técnico › Parámetros del sistema.
 SCHEDULE_DEFAULTS = {
     'day_start': 7.0,       # Remote_Attendance.day_start: hours before this are not counted
@@ -63,6 +63,9 @@ class HrAttendance(models.Model):
     ], string="Tiempo extra", tracking=True, index=True, copy=False,
         help="Al salir más tarde del horario, el supervisor indicó que es tiempo extra. "
              "Esas horas se cargan al proyecto solo cuando se aprueban.")
+    field_skip_lunch = fields.Boolean(
+        "Sin hora de comida", help="Cargada a mano indicando que no salió a comer: no se descuenta la comida.")
+    field_loaded_by_id = fields.Many2one('res.users', string="Cargada a mano por", readonly=True)
     field_regular_hours = fields.Float("Horas en horario", compute='_compute_field_hours')
     field_overtime_hours = fields.Float("Horas extra", compute='_compute_field_hours')
     field_allocation_ids = fields.One2many(
@@ -109,7 +112,7 @@ class HrAttendance(models.Model):
         _start, end = self._field_day_bounds(schedule)
         return when >= end + timedelta(hours=schedule['overtime_after'])
 
-    @api.depends('check_in', 'check_out', 'field_in_kind', 'field_out_kind', 'employee_id')
+    @api.depends('check_in', 'check_out', 'field_in_kind', 'field_out_kind', 'field_skip_lunch', 'employee_id')
     def _compute_field_hours(self):
         schedule = self._field_schedule()
         for attendance in self:
@@ -121,7 +124,7 @@ class HrAttendance(models.Model):
             finish = min(attendance.check_out, end)
             regular = max(0.0, (finish - begin).total_seconds() / 3600)
             lunch_marked = attendance.field_in_kind == 'lunch' or attendance.field_out_kind == 'lunch'
-            if not lunch_marked and regular >= LUNCH_MIN_HOURS:
+            if not (lunch_marked or attendance.field_skip_lunch) and regular >= LUNCH_MIN_HOURS:
                 regular -= schedule['lunch_hours']
             overtime = (attendance.check_out - max(attendance.check_in, end)).total_seconds() / 3600
             attendance.field_regular_hours = regular

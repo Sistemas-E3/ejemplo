@@ -10,6 +10,8 @@
                     <group>
                         <field name="field_project_id"/>
                         <field name="field_supervisor_id"/>
+                        <field name="field_loaded_by_id" invisible="not field_loaded_by_id"/>
+                        <field name="field_skip_lunch" invisible="not field_loaded_by_id"/>
                         <field name="field_in_kind" invisible="not field_in_kind"/>
                         <field name="field_out_kind" invisible="not field_out_kind"/>
                         <field name="field_regular_hours" widget="float_time" invisible="not check_out"/>
@@ -99,6 +101,7 @@
                        decoration-danger="field_overtime_state == 'rejected'"/>
                 <field name="in_gps_distance" optional="show"/>
                 <field name="field_review_reason" optional="show"/>
+                <field name="field_loaded_by_id" optional="hide"/>
                 <field name="field_state" widget="badge"
                        decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
                        decoration-danger="field_state == 'rejected'"/>
@@ -118,6 +121,7 @@
                 <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
                 <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
                 <filter name="overtime" string="Tiempo extra por validar" domain="[('field_overtime_state', '=', 'pending')]"/>
+                <filter name="manual" string="Cargadas a mano" domain="[('field_loaded_by_id', '!=', False)]"/>
                 <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
                 <group>

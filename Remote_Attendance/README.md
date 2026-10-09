@@ -45,6 +45,21 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
   en revisión para que RH capture la salida.
 - Cuando la comida está marcada, las horas del proyecto son las reales (no se descuenta además la hora de comida del horario).
 
+## Cargar asistencias a mano (Operaciones)
+
+En *Asistencias › Campo › Cargar asistencias a mano*:
+
+1. Elige el **día** y la **obra**. Si eliges un **supervisor**, se agrega su cuadrilla; *Agregar todo el personal de campo*
+   pone a todos. También puedes agregar personas una por una.
+2. Palomea **Asistió** a quien vino. Entrada y salida empiezan en 7:00 y 17:00 (cámbialas arriba para todos o por persona).
+3. Escribe la salida o directamente las **horas trabajadas**: Odoo ajusta la salida sumando la hora de comida.
+   Quita *Salió a comer* si la persona no comió. La columna *Otra obra* (oculta) sirve si alguien estuvo en otra obra.
+4. **Cargar asistencias** crea las asistencias y sus horas en el proyecto con la misma regla del horario.
+   Lo que pase de las 17:00 entra como tiempo extra ya aprobado, porque lo carga Operaciones.
+   Quien ya tiene asistencia ese día se salta y se avisa.
+
+Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*) y se pueden filtrar con *Cargadas a mano* en *Marcajes*.
+
 ## Horario, comida y tiempo extra
 
 - Las horas del proyecto se cuentan solo dentro del horario: de **7:00 a 17:00** (hora del empleado; revisa que su
