@@ -94,8 +94,8 @@
                 <field name="field_in_kind" optional="show"/>
                 <field name="check_out"/>
                 <field name="field_out_kind" optional="show"/>
-                <field name="field_regular_hours" widget="float_time" string="Horas"/>
-                <field name="field_overtime_hours" widget="float_time" optional="show"/>
+                <field name="field_regular_hours" widget="float_time" string="Horas" sum="Horas"/>
+                <field name="field_overtime_hours" widget="float_time" optional="show" sum="Extra"/>
                 <field name="field_overtime_state" optional="show" widget="badge"
                        decoration-warning="field_overtime_state == 'pending'" decoration-success="field_overtime_state == 'approved'"
                        decoration-danger="field_overtime_state == 'rejected'"/>
@@ -125,6 +125,8 @@
                 <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
                 <group>
+                    <filter name="group_supervisor" string="Supervisor" context="{'group_by': 'field_supervisor_id'}"/>
+                    <filter name="group_day" string="Día" context="{'group_by': 'field_date:day'}"/>
                     <filter name="group_project" string="Obra" context="{'group_by': 'field_project_id'}"/>
                     <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
                 </group>
@@ -143,6 +145,20 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
             <p>Aquí aparecen los marcajes fuera de obra, sin GPS, hechos con PIN o con la comida registrada después.</p>
+        </field>
+    </record>
+
+    <record id="Remote_Attendance_by_supervisor_action" model="ir.actions.act_window">
+        <field name="name">Asistencia por supervisor</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_group_supervisor': 1, 'search_default_group_day': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay asistencias en campo</p>
+            <p>Aquí se ve la asistencia agrupada por el supervisor que trae a cada persona y por día.</p>
         </field>
     </record>
 

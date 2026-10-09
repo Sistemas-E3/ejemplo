@@ -66,8 +66,8 @@ class HrAttendance(models.Model):
     field_skip_lunch = fields.Boolean(
         "Sin hora de comida", help="Cargada a mano indicando que no salió a comer: no se descuenta la comida.")
     field_loaded_by_id = fields.Many2one('res.users', string="Cargada a mano por", readonly=True)
-    field_regular_hours = fields.Float("Horas en horario", compute='_compute_field_hours')
-    field_overtime_hours = fields.Float("Horas extra", compute='_compute_field_hours')
+    field_regular_hours = fields.Float("Horas en horario", compute='_compute_field_hours', store=True)
+    field_overtime_hours = fields.Float("Horas extra", compute='_compute_field_hours', store=True)
     field_allocation_ids = fields.One2many(
         'hr.field.allocation', 'attendance_id', string="Reparto por proyecto",
         help="Cuando la asistencia viene de una lista de WhatsApp, cómo se reparte el día entre proyectos.")
@@ -112,7 +112,7 @@ class HrAttendance(models.Model):
         _start, end = self._field_day_bounds(schedule)
         return when >= end + timedelta(hours=schedule['overtime_after'])
 
-    @api.depends('check_in', 'check_out', 'field_in_kind', 'field_out_kind', 'field_skip_lunch', 'employee_id')
+    @api.depends('check_in', 'check_out', 'field_in_kind', 'field_out_kind', 'field_skip_lunch', 'employee_id', 'employee_id.tz')
     def _compute_field_hours(self):
         schedule = self._field_schedule()
         for attendance in self:

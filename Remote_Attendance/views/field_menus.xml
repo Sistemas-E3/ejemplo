@@ -13,6 +13,8 @@
               action="hr_field_manual_load_action"/>
     <menuitem id="menu_field_review" name="Marcajes" parent="menu_field_root" sequence="1"
               action="Remote_Attendance_review_action"/>
+    <menuitem id="menu_field_by_supervisor" name="Asistencia por supervisor" parent="menu_field_root" sequence="1"
+              action="Remote_Attendance_by_supervisor_action"/>
     <menuitem id="menu_field_overtime" name="Tiempo extra por validar" parent="menu_field_root" sequence="1"
               action="Remote_Attendance_overtime_action"/>
     <menuitem id="menu_field_employees" name="Personal de campo" parent="menu_field_root" sequence="2"

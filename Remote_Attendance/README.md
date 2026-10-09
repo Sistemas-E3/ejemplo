@@ -66,6 +66,8 @@ En *Asistencias › Campo › Cargar asistencias a mano*:
    Lo que pase de las 17:00 entra como tiempo extra ya aprobado, porque lo carga Operaciones.
    Quien ya tiene asistencia ese día se salta y se avisa.
 
+En *Asistencias › Campo › Asistencia por supervisor* se ve todo agrupado por supervisor y por día, con el total de horas y horas extra de cada grupo.
+
 Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*) y se pueden filtrar con *Cargadas a mano* en *Marcajes*.
 
 ## Horario, comida y tiempo extra
