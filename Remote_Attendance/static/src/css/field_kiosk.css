@@ -88,6 +88,47 @@ body {
 .fk-toast-error { background: var(--fk-error); }
 .fk-toast-info { background: #374151; }
 
+/* Vertical tablet: a taller camera fills the screen instead of leaving it empty. */
+@media (orientation: portrait) and (min-width: 600px) {
+    .fk-office .fk-camera { aspect-ratio: 3 / 4; max-height: calc(100vh - 290px); max-height: calc(100dvh - 290px); }
+}
+
+/* Horizontal: camera on the left, buttons on the right, everything fits the screen height. */
+@media (orientation: landscape) and (min-width: 560px) {
+    .fk, .fk-office { max-width: none; padding: 8px 16px 16px; gap: 8px; }
+    .fk-card { width: 100%; max-width: 640px; margin: 0 auto; }
+    #screen-kiosk:not([hidden]) {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr);
+        grid-auto-rows: min-content;
+        column-gap: 16px;
+        row-gap: 0;
+        align-items: start;
+    }
+    #screen-kiosk > .fk-camera {
+        grid-column: 1;
+        grid-row: 1 / span 30;
+        aspect-ratio: auto;
+        height: calc(100vh - 84px);
+        height: calc(100dvh - 84px);
+        min-height: 200px;
+        position: sticky;
+        top: 8px;
+    }
+    #screen-kiosk > :not(.fk-camera) { grid-column: 2; margin-bottom: 8px; }
+    #screen-kiosk .fk-card { max-width: none; }
+    .fk-kinds .fk-btn { padding: 14px 8px; font-size: 17px; }
+    .fk-office-result { font-size: 24px; }
+    .fk-sheet {
+        top: 0; bottom: 0; left: auto; right: 0;
+        width: min(460px, 100%);
+        max-height: none;
+        border-radius: 16px 0 0 16px;
+        box-shadow: -8px 0 24px rgba(0, 0, 0, .2);
+    }
+    .fk-toast { left: auto; right: 16px; width: min(460px, calc(100% - 32px)); }
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --fk-bg: #111827;
