@@ -73,6 +73,25 @@ class TestFieldManualLoad(TransactionCase):
         self.assertFalse(beto.field_overtime_state)
         self.assertEqual(beto.field_timesheet_ids.unit_amount, 5.0)
 
+    def test_operations_assigns_project_in_list(self):
+        Attendance = self.env['hr.attendance']
+        loaded = Attendance.create({
+            'employee_id': self.worker_a.id, 'check_in': '2026-09-28 05:00:00', 'check_out': '2026-09-28 15:00:00',
+            'field_state': 'valid', 'field_project_id': self.project.id,
+        })
+        plain = Attendance.create({
+            'employee_id': self.worker_b.id, 'check_in': '2026-09-28 05:00:00', 'check_out': '2026-09-28 15:00:00',
+        })
+        as_ops = Attendance.with_user(self.ops_user)
+        self.assertEqual(set(as_ops.search([('id', 'in', (loaded | plain).ids)]).ids), set((loaded | plain).ids),
+                         "Operations sees the attendances of every field employee")
+        loaded.with_user(self.ops_user).field_project_id = self.other_project
+        self.assertEqual(loaded.field_timesheet_ids.project_id, self.other_project)
+        self.assertEqual(loaded.field_timesheet_ids.unit_amount, 9.0)
+        plain.with_user(self.ops_user).field_project_id = self.project
+        self.assertEqual(plain.field_state, 'valid')
+        self.assertEqual(plain.field_timesheet_ids.project_id, self.project)
+
     def test_no_lunch_full_day_and_other_project(self):
         form = self._form()
         with form.line_ids.new() as line:

@@ -23,7 +23,8 @@
                         </div>
                         <field name="field_state" readonly="1"/>
                         <field name="field_review_reason" invisible="not field_review_reason"/>
-                        <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"/>
+                        <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"
+                               groups="hr_timesheet.group_hr_timesheet_approver"/>
                         <div colspan="2" groups="Remote_Attendance.group_field_operations">
                             <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"
                                     invisible="field_state not in ('review', 'rejected')"/>
@@ -80,29 +81,32 @@
         <field name="model">hr.attendance</field>
         <field name="priority">100</field>
         <field name="arch" type="xml">
-            <list string="Marcajes en campo" create="false" duplicate="false">
+            <list string="Marcajes en campo" create="false" duplicate="false" editable="bottom"
+                  decoration-danger="check_out and not field_project_id and not field_allocation_ids">
                 <header>
                     <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"/>
                     <button name="action_field_reject" type="object" string="Rechazar"/>
                     <button name="action_field_overtime_approve" type="object" string="Aprobar tiempo extra"/>
                     <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra"/>
                 </header>
-                <field name="employee_id" widget="many2one_avatar_employee"/>
-                <field name="field_project_id"/>
+                <field name="employee_id" widget="many2one_avatar_employee" readonly="1"/>
+                <field name="field_project_id" string="Obra / proyecto" options="{'no_create': True}"
+                       readonly="field_allocation_ids" groups="Remote_Attendance.group_field_operations"/>
+                <field name="field_allocation_ids" column_invisible="1"/>
                 <field name="field_supervisor_id" optional="show"/>
-                <field name="check_in"/>
+                <field name="check_in" readonly="1"/>
                 <field name="field_in_kind" optional="show"/>
-                <field name="check_out"/>
+                <field name="check_out" readonly="1"/>
                 <field name="field_out_kind" optional="show"/>
                 <field name="field_regular_hours" widget="float_time" string="Horas" sum="Horas"/>
                 <field name="field_overtime_hours" widget="float_time" optional="show" sum="Extra"/>
-                <field name="field_overtime_state" optional="show" widget="badge"
+                <field name="field_overtime_state" optional="show" widget="badge" readonly="1"
                        decoration-warning="field_overtime_state == 'pending'" decoration-success="field_overtime_state == 'approved'"
                        decoration-danger="field_overtime_state == 'rejected'"/>
                 <field name="in_gps_distance" optional="show"/>
                 <field name="field_review_reason" optional="show"/>
                 <field name="field_loaded_by_id" optional="hide"/>
-                <field name="field_state" widget="badge"
+                <field name="field_state" widget="badge" readonly="1"
                        decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
                        decoration-danger="field_state == 'rejected'"/>
             </list>
@@ -121,6 +125,7 @@
                 <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
                 <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
                 <filter name="overtime" string="Tiempo extra por validar" domain="[('field_overtime_state', '=', 'pending')]"/>
+                <filter name="no_project" string="Sin obra" domain="[('check_out', '!=', False), ('field_project_id', '=', False), ('field_allocation_ids', '=', False)]"/>
                 <filter name="manual" string="Cargadas a mano" domain="[('field_loaded_by_id', '!=', False)]"/>
                 <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>

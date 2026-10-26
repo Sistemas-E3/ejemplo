@@ -70,6 +70,13 @@ En *Asistencias › Campo › Asistencia por supervisor* se ve todo agrupado por
 
 Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*) y se pueden filtrar con *Cargadas a mano* en *Marcajes*.
 
+## Asignar la obra desde la lista
+
+En *Marcajes* y *Asistencia por supervisor*, Operaciones puede cambiar la columna **Obra / proyecto** de cada asistencia
+directamente en la lista y tocar **Guardar**. Las horas se mueven a esa obra. En rojo y con el filtro **Sin obra** salen las
+asistencias cerradas que aún no tienen obra (por ejemplo, entradas de oficina o de checador). Operaciones ve las asistencias
+de todo el personal de campo, aunque no sea su responsable de asistencias en Odoo.
+
 ## Listas de horas en Excel
 
 En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el periodo (y si quieres un supervisor o una obra),

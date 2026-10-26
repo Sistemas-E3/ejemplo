@@ -13,4 +13,13 @@
         <field name="implied_ids" eval="[(4, ref('hr.group_hr_user')), (4, ref('hr_attendance.group_hr_attendance_officer'))]"/>
         <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
     </record>
+
+    <!-- Attendance officers only see the employees they manage; Operations works with all the field staff. -->
+    <record id="rule_attendance_field_operations" model="ir.rule">
+        <field name="name">Operaciones de campo: asistencias del personal de campo</field>
+        <field name="model_id" ref="hr_attendance.model_hr_attendance"/>
+        <field name="domain_force">['|', ('field_state', '!=', False), ('employee_id.field_role', '!=', False)]</field>
+        <field name="groups" eval="[(4, ref('Remote_Attendance.group_field_operations'))]"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
 </odoo>

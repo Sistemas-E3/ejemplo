@@ -160,9 +160,12 @@ class HrAttendance(models.Model):
         return attendances
 
     def write(self, vals):
+        if vals.get('field_project_id') and 'field_state' not in vals:
+            # Operations assigning the project of an attendance that came without one (e.g. Odoo's own kiosk).
+            self.filtered(lambda a: not a.field_state).write({'field_state': 'valid'})
         res = super().write(vals)
         if SYNC_FIELDS & set(vals):
-            self.filtered(
+            self.sudo().filtered(
                 lambda a: a.field_project_id or a.field_allocation_ids or a.field_timesheet_ids
             )._field_sync_timesheet()
         return res
