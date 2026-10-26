@@ -90,7 +90,7 @@
                     <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra"/>
                 </header>
                 <field name="employee_id" widget="many2one_avatar_employee" readonly="1"/>
-                <field name="field_project_id" string="Obra / proyecto" options="{'no_create': True}"
+                <field name="field_project_id" string="Proyecto" options="{'no_create': True}"
                        readonly="field_allocation_ids" groups="Remote_Attendance.group_field_operations"/>
                 <field name="field_allocation_ids" column_invisible="1"/>
                 <field name="field_supervisor_id" optional="show"/>
@@ -125,14 +125,14 @@
                 <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
                 <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
                 <filter name="overtime" string="Tiempo extra por validar" domain="[('field_overtime_state', '=', 'pending')]"/>
-                <filter name="no_project" string="Sin obra" domain="[('check_out', '!=', False), ('field_project_id', '=', False), ('field_allocation_ids', '=', False)]"/>
+                <filter name="no_project" string="Sin proyecto" domain="[('check_out', '!=', False), ('field_project_id', '=', False), ('field_allocation_ids', '=', False)]"/>
                 <filter name="manual" string="Cargadas a mano" domain="[('field_loaded_by_id', '!=', False)]"/>
                 <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
                 <group>
                     <filter name="group_supervisor" string="Supervisor" context="{'group_by': 'field_supervisor_id'}"/>
                     <filter name="group_day" string="Día" context="{'group_by': 'field_date:day'}"/>
-                    <filter name="group_project" string="Obra" context="{'group_by': 'field_project_id'}"/>
+                    <filter name="group_project" string="Proyecto" context="{'group_by': 'field_project_id'}"/>
                     <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
                 </group>
             </search>
@@ -149,7 +149,7 @@
         <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
-            <p>Aquí aparecen los marcajes fuera de obra, sin GPS, hechos con PIN o con la comida registrada después.</p>
+            <p>Aquí aparecen los marcajes fuera del proyecto, sin GPS, hechos con PIN o con la comida registrada después.</p>
         </field>
     </record>
 

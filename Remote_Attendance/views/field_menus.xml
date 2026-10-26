@@ -23,12 +23,12 @@
               action="hr_employee_field_action"/>
     <menuitem id="menu_field_enroll_photos" name="Registrar rostros con foto" parent="menu_field_root" sequence="2"
               action="action_field_enroll_photos"/>
-    <menuitem id="menu_field_projects" name="Obras" parent="menu_field_root" sequence="3"
+    <menuitem id="menu_field_projects" name="Proyectos" parent="menu_field_root" sequence="3"
               action="project_project_field_action"/>
     <menuitem id="menu_field_devices" name="Teléfonos" parent="menu_field_root" sequence="4"
               action="hr_field_device_action"/>
     <menuitem id="menu_field_alias" name="Nombres recordados" parent="menu_field_root" sequence="5"
               action="hr_field_alias_action"/>
-    <menuitem id="menu_field_project_alias" name="Obras recordadas" parent="menu_field_root" sequence="6"
+    <menuitem id="menu_field_project_alias" name="Proyectos recordados" parent="menu_field_root" sequence="6"
               action="hr_field_project_alias_action"/>
 </odoo>

@@ -167,7 +167,7 @@ class HrFieldAlias(models.Model):
 
 class HrFieldProjectAlias(models.Model):
     _name = 'hr.field.project.alias'
-    _description = "Obra o actividad recordada (listas de WhatsApp)"
+    _description = "Proyecto o actividad recordado (listas de WhatsApp)"
     _order = 'name'
 
     name = fields.Char("Como lo escriben", required=True, index=True)
@@ -193,10 +193,10 @@ class HrFieldRosterImport(models.TransientModel):
 
     date = fields.Date("Fecha", required=True, default=fields.Date.context_today)
     message = fields.Text("Mensaje de WhatsApp", required=True,
-                          help="Pega el mensaje tal cual: presupuesto u obra y la lista de gente.")
+                          help="Pega el mensaje tal cual: presupuesto o proyecto y la lista de gente.")
     supervisor_id = fields.Many2one('hr.employee', "Supervisor que envió la lista",
                                     domain=[('field_role', '=', 'supervisor')])
-    block_ids = fields.One2many('hr.field.roster.block', 'wizard_id', "Obras y actividades")
+    block_ids = fields.One2many('hr.field.roster.block', 'wizard_id', "Proyectos y actividades")
     line_ids = fields.One2many('hr.field.roster.line', 'wizard_id', "Personas")
     state = fields.Selection([('draft', "Pegar"), ('preview', "Revisar")], default='draft')
     unmatched_count = fields.Integer(compute='_compute_counts')
@@ -265,7 +265,7 @@ class HrFieldRosterImport(models.TransientModel):
         if block['title']:
             project = self._project_by_text(block['title'])
             return project, 'exact' if project else 'none', block['title'], title
-        return Project, 'none', '', title or _("Sin obra")
+        return Project, 'none', '', title or _("Sin proyecto")
 
     @api.model
     def _field_staff(self):
@@ -318,7 +318,7 @@ class HrFieldRosterImport(models.TransientModel):
                     name, fraction, hours = split_amount(block['title'])
                     if name and not is_header(name):
                         people.insert(0, (name, fraction, hours))
-                    project, match, key, title = self.env['project.project'], 'none', '', _("Sin obra")
+                    project, match, key, title = self.env['project.project'], 'none', '', _("Sin proyecto")
             seen, line_cmds = set(), []
             for raw, fraction, hours in people:
                 employee, emp_match = self._match_employee(raw, staff, staff_names, staff_keys)
@@ -437,7 +437,7 @@ class HrFieldRosterImport(models.TransientModel):
 
 class HrFieldRosterBlock(models.TransientModel):
     _name = 'hr.field.roster.block'
-    _description = "Obra o actividad de la lista de WhatsApp"
+    _description = "Proyecto o actividad de la lista de WhatsApp"
     _order = 'sequence, id'
     _rec_name = 'title'
 
@@ -467,7 +467,7 @@ class HrFieldRosterLine(models.TransientModel):
     _order = 'block_sequence, id'
 
     wizard_id = fields.Many2one('hr.field.roster.import', ondelete='cascade')
-    block_id = fields.Many2one('hr.field.roster.block', "Obra", ondelete='cascade', readonly=True)
+    block_id = fields.Many2one('hr.field.roster.block', "Proyecto", ondelete='cascade', readonly=True)
     block_sequence = fields.Integer(related='block_id.sequence', store=True)
     include = fields.Boolean("Registrar", default=True)
     raw_name = fields.Char("Como viene en el mensaje", readonly=True)

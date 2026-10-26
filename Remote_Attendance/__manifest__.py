@@ -2,7 +2,7 @@
     'name': 'Asistencias en campo',
     'version': '18.0.1.4.0',
     'category': 'Human Resources/Attendances',
-    'summary': 'Marcaje con reconocimiento facial y GPS desde el teléfono, ligado a la obra y a las horas del proyecto',
+    'summary': 'Marcaje con reconocimiento facial y GPS desde el teléfono, ligado al proyecto y a sus horas',
     'description': """
 Asistencias en campo
 ====================
@@ -11,8 +11,8 @@ Asistencias en campo
   enlace con token, teléfono aprobado por Operaciones y PIN.
 * Reconocimiento facial en el navegador (face-api) con comparación en el servidor
   contra la cuadrilla del supervisor.
-* Obras activas del día elegidas por el supervisor entre las que Operaciones le asignó.
-* Geocerca por obra: fuera del radio el marcaje queda en revisión.
+* Proyectos activos del día elegidos por el supervisor entre las que Operaciones le asignó.
+* Geocerca por proyecto: fuera del radio el marcaje queda en revisión.
 * Cada asistencia cerrada genera su línea de horas en el proyecto.
 """,
     'author': 'E3',

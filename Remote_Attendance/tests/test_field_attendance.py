@@ -143,7 +143,7 @@ class TestFieldAttendance(TransactionCase):
         self._activate(self.project_a)
         result = self._punch(self.sup_device, descriptor=vector(1.0), latitude=19.44, longitude=-99.1332)
         self.assertEqual(result['state'], 'review')
-        self.assertTrue(any('Fuera de obra' in r for r in result['reasons']))
+        self.assertTrue(any('Fuera del proyecto' in r for r in result['reasons']))
 
     def test_no_gps_goes_to_review(self):
         self._activate(self.project_a)

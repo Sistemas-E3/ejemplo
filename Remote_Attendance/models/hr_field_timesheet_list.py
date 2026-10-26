@@ -29,13 +29,13 @@ class HrFieldTimesheetList(models.Model):
     date_to = fields.Date("Hasta", required=True, default=fields.Date.context_today, tracking=True)
     supervisor_id = fields.Many2one('hr.employee', "Supervisor", domain=[('field_role', '=', 'supervisor')],
                                     tracking=True, help="Vacío = todos los supervisores.")
-    project_id = fields.Many2one('project.project', "Obra", tracking=True, help="Vacío = todas las obras.")
+    project_id = fields.Many2one('project.project', "Proyecto", tracking=True, help="Vacío = todos los proyectos.")
     state = fields.Selection([
         ('draft', "Borrador"),
         ('exported', "Exportada"),
     ], string="Estado", default='draft', tracking=True)
     line_ids = fields.One2many('hr.field.timesheet.list.line', 'list_id', string="Renglones")
-    line_count = fields.Integer("Renglones", compute='_compute_totals')
+    line_count = fields.Integer("Número de renglones", compute='_compute_totals')
     total_hours = fields.Float("Horas en total", compute='_compute_totals')
     excel_file = fields.Binary("Excel", attachment=True, readonly=True, copy=False)
     excel_name = fields.Char(readonly=True, copy=False)

@@ -34,12 +34,12 @@ class HrEmployee(models.Model):
         'hr.employee', 'field_supervisor_id', string="Cuadrilla", groups=OPS_GROUP)
     field_project_ids = fields.Many2many(
         'project.project', 'project_field_supervisor_rel', 'employee_id', 'project_id',
-        string="Obras asignadas", groups=OPS_GROUP,
-        help="Obras que este supervisor puede activar. Las asigna Operaciones.")
+        string="Proyectos asignados", groups=OPS_GROUP,
+        help="Proyectos que este supervisor puede activar. Las asigna Operaciones.")
     field_active_project_ids = fields.Many2many(
         'project.project', 'hr_employee_field_active_project_rel', 'employee_id', 'project_id',
-        string="Obras activas", groups=OPS_GROUP, readonly=True)
-    field_active_date = fields.Date("Obras activas del día", groups=OPS_GROUP, readonly=True)
+        string="Proyectos activos", groups=OPS_GROUP, readonly=True)
+    field_active_date = fields.Date("Proyectos activos del día", groups=OPS_GROUP, readonly=True)
     field_token = fields.Char("Clave del enlace", groups=OPS_GROUP, copy=False, index='btree_not_null')
     field_kiosk_url = fields.Char("Enlace de marcaje", compute='_compute_field_kiosk_url', groups=OPS_GROUP)
     field_device_ids = fields.One2many('hr.field.device', 'employee_id', string="Teléfonos", groups=OPS_GROUP)

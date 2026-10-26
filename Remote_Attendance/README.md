@@ -1,25 +1,25 @@
 # Asistencias en campo (Odoo 18)
 
-Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado a la obra
-(proyecto) y convertido automáticamente en horas del proyecto.
+Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado al proyecto
+y convertido automáticamente en sus horas.
 
 ## Cómo funciona
 
 1. **Operaciones** (usuarios internos con el grupo *Asistencias en campo › Operaciones de campo*):
-   - En *Asistencias › Campo › Obras* asigna supervisores a cada obra y captura su ubicación y radio (200 m por defecto).
+   - En *Asistencias › Campo › Proyectos* asigna supervisores a cada proyecto y captura su ubicación y radio (200 m por defecto).
    - En la ficha del empleado, pestaña **Campo**: rol (supervisor o trabajador), supervisor de la cuadrilla,
      PIN, **Generar enlace nuevo** y **Registrar rostro** (requiere consentimiento firmado).
    - En *Asistencias › Campo › Teléfonos* aprueba los teléfonos que solicitan acceso.
-2. **Supervisor** (sin usuario de Odoo): abre su enlace en su teléfono, elige con su PIN las **obras de hoy**
+2. **Supervisor** (sin usuario de Odoo): abre su enlace en su teléfono, elige con su PIN los **proyectos de hoy**
    entre las que tiene asignadas, y su cuadrilla marca frente a su cámara.
 3. **Trabajador** (sin usuario de Odoo): cuando el supervisor no está, marca desde su propio teléfono con su enlace;
-   solo se reconoce su rostro y solo puede usar las obras activas de su supervisor.
+   solo se reconoce su rostro y solo puede usar los proyectos activos de su supervisor.
 4. Cada marcaje:
    - identifica a la persona comparando su huella facial en el servidor (umbral `Remote_Attendance.face_threshold`, 0.5 por defecto);
    - si no la reconoce, permite marcar con PIN y queda **en revisión**;
-   - si hay varias obras activas, sugiere la más cercana por GPS;
+   - si hay varios proyectos activos, sugiere el más cercano por GPS;
    - fuera del radio o sin GPS, queda **en revisión**;
-   - **Cambiar de obra** cierra la asistencia actual y abre otra en la nueva obra.
+   - **Cambiar de proyecto** cierra la asistencia actual y abre otra en el nuevo proyecto.
 5. Al cerrar una asistencia válida o aprobada se crea su línea de horas en el proyecto.
    Las que están en revisión generan horas cuando Operaciones las aprueba (*Asistencias › Campo › Marcajes*).
 
@@ -28,7 +28,7 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
 | Momento | Dónde | Cómo |
 |---|---|---|
 | Entrada | Tablet de la oficina | Se para frente a la cámara (no toca nada) o pasa su tarjeta |
-| Salida a comer | Teléfono del supervisor, en la obra | Botón **Salida a comer** y cara |
+| Salida a comer | Teléfono del supervisor, en el proyecto | Botón **Salida a comer** y cara |
 | Regreso de comer | Teléfono del supervisor | Botón **Regreso de comer** y cara |
 | Salida | Teléfono del supervisor | Botón **Salida** y cara |
 
@@ -36,10 +36,10 @@ Marcaje de asistencia desde el teléfono con reconocimiento facial y GPS, ligado
   y su tablet aprobada. Reconoce a todo el personal de campo de forma automática; un segundo escaneo en
   menos de 30 minutos se ignora. Acepta lectores de tarjeta que escriben el número y Enter: el número es el
   **ID de credencial** del empleado. *Marcar con PIN* para quien no se reconozca (queda en revisión).
-- La entrada en oficina no tiene obra; al marcar en la obra, esas horas se cargan a la obra donde marca.
+- La entrada en oficina no tiene proyecto; al marcar en el proyecto, esas horas se cargan al proyecto donde marca.
 - El teléfono del supervisor reconoce a todo el personal de campo (también a gente prestada de otra cuadrilla);
-  las horas van a las obras activas de quien marca.
-- **Registrar comida después**: si el supervisor estaba en otra obra a la hora de comer, elige la persona,
+  las horas van a los proyectos activos de quien marca.
+- **Registrar comida después**: si el supervisor estaba en otro proyecto a la hora de comer, elige la persona,
   el día (hoy o ayer) y las horas de salida y regreso. La asistencia se parte en dos y queda en revisión de RH.
 - Si alguien no marcó salida el día anterior, al marcar la entrada se cierra esa asistencia sin horas y queda
   en revisión para que RH capture la salida.
@@ -56,12 +56,12 @@ La tablet de oficina conserva *Marcar con PIN* y la tarjeta.
 
 En *Asistencias › Campo › Cargar asistencias a mano*:
 
-1. Elige el **día** y la **obra**. Si eliges un **supervisor**, se agrega su cuadrilla; *Agregar todo el personal de campo*
+1. Elige el **día** y el **proyecto**. Si eliges un **supervisor**, se agrega su cuadrilla; *Agregar todo el personal de campo*
    pone a todos. También puedes agregar personas una por una.
 2. Cada fila lleva **empleado**, **supervisor que lo trae** y **horas trabajadas**. El supervisor se llena con el de arriba
    o con el de su cuadrilla y se puede cambiar (gente prestada). Palomea **Asistió** a quien vino. Entrada y salida empiezan en 7:00 y 17:00 (cámbialas arriba para todos o por persona).
 3. Escribe la salida o directamente las **horas trabajadas**: Odoo ajusta la salida sumando la hora de comida.
-   Quita *Salió a comer* si la persona no comió. La columna *Otra obra* (oculta) sirve si alguien estuvo en otra obra.
+   Quita *Salió a comer* si la persona no comió. La columna *Otro proyecto* (oculta) sirve si alguien estuvo en otro proyecto.
 4. **Cargar asistencias** crea las asistencias y sus horas en el proyecto con la misma regla del horario.
    Lo que pase de las 17:00 entra como tiempo extra ya aprobado, porque lo carga Operaciones.
    Quien ya tiene asistencia ese día se salta y se avisa.
@@ -70,17 +70,17 @@ En *Asistencias › Campo › Asistencia por supervisor* se ve todo agrupado por
 
 Las asistencias cargadas a mano guardan quién las cargó (*Cargada a mano por*) y se pueden filtrar con *Cargadas a mano* en *Marcajes*.
 
-## Asignar la obra desde la lista
+## Asignar el proyecto desde la lista
 
-En *Marcajes* y *Asistencia por supervisor*, Operaciones puede cambiar la columna **Obra / proyecto** de cada asistencia
-directamente en la lista y tocar **Guardar**. Las horas se mueven a esa obra. En rojo y con el filtro **Sin obra** salen las
-asistencias cerradas que aún no tienen obra (por ejemplo, entradas de oficina o de checador). Operaciones ve las asistencias
+En *Marcajes* y *Asistencia por supervisor*, Operaciones puede cambiar la columna **Proyecto** de cada asistencia
+directamente en la lista y tocar **Guardar**. Las horas se mueven a ese proyecto. En rojo y con el filtro **Sin proyecto** salen las
+asistencias cerradas que aún no tienen proyecto (por ejemplo, entradas de oficina o de checador). Operaciones ve las asistencias
 de todo el personal de campo, aunque no sea su responsable de asistencias en Odoo.
 
 ## Listas de horas en Excel
 
-En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el periodo (y si quieres un supervisor o una obra),
-**Generar lista** y **Descargar Excel**. Entran solo asistencias válidas o aprobadas, un renglón por persona, día y obra.
+En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el periodo (y si quieres un supervisor o un proyecto),
+**Generar lista** y **Descargar Excel**. Entran solo asistencias válidas o aprobadas, un renglón por persona, día y proyecto.
 
 - La hoja **Hojas de horas** tiene las columnas Fecha, Empleado, Proyecto y Cantidad, que Odoo reconoce
   solas al importar en *Proyectos › Hojas de horas › Importar*. El módulo deja guardado que "Proyecto" es el proyecto de la hoja
@@ -113,8 +113,8 @@ En *Asistencias › Campo › Listas de horas (Excel)*: **Nuevo**, elige el peri
 
 ## Enlace del supervisor
 
-Abre directo en la cámara (el pase de lista queda escondido). Si el supervisor tiene **una sola obra asignada**, queda
-activa sola; con varias, elige las del día en *Obras de hoy*.
+Abre directo en la cámara (el pase de lista queda escondido). Si el supervisor tiene **un solo proyecto asignado**, queda
+activa sola; con varias, elige las del día en *Proyectos de hoy*.
 
 ## Clave del empleado
 
@@ -145,14 +145,14 @@ Jhonatan Peña
 
 1. Operaciones abre *Asistencias › Campo › Cargar lista de WhatsApp*, elige supervisor y fecha y pega el mensaje
    (sirve con o sin la fecha y el nombre que agrega WhatsApp al copiar).
-2. Cada `PRESUPUESTO:` (o `PROYECTO:` / `OBRA:`) abre un bloque; la obra se reconoce por su **Número de proyecto**
+2. Cada `PRESUPUESTO:` (o `PROYECTO:` / `OBRA:`) abre un bloque; el proyecto se reconoce por su **Número de proyecto**
    (o el código analítico o el número dentro del nombre). Una línea suelta como `Curso hidro 1/2 día` o `taller 1/2 día`
-   también abre un bloque: la primera vez se elige a qué proyecto va y Odoo lo recuerda (*Obras recordadas*).
+   también abre un bloque: la primera vez se elige a qué proyecto va y Odoo lo recuerda (*Proyectos recordados*).
 3. `1/2 día`, `medio día` o `4 hrs` junto al bloque o al nombre indican la parte de la jornada.
 4. Las personas se buscan entre todo el personal de campo (incluida la gente prestada de otras cuadrillas).
    Al corregir un nombre, Odoo lo recuerda (*Nombres recordados*).
 5. **Registrar asistencia** crea **una asistencia por persona y día** con la jornada de su horario y la reparte entre
-   las obras: por ejemplo 4 h en la 2316-26 y 4 h en el curso. Cada obra recibe su línea en la hoja de horas.
+   los proyectos: por ejemplo 4 h en la 2316-26 y 4 h en el curso. Cada proyecto recibe su línea en la hoja de horas.
    Si la persona ya marcó con el teléfono no se duplica; si se cargan más mensajes del mismo día se suman.
    Si suma más de una jornada o es día no laborable, queda en revisión.
 
@@ -162,11 +162,11 @@ Otra forma de reportar, además de WhatsApp (las dos conviven y se suman):
 
 1. El supervisor abre su enlace (*Personal de campo › Campo › enlace*) en su teléfono aprobado. Entra directo a **Pase de lista**;
    el botón *Cámara* lleva al marcaje con reconocimiento facial.
-2. Elige **Hoy** o **Ayer** y una de sus obras asignadas (solo ve esas).
+2. Elige **Hoy** o **Ayer** y una de sus proyectos asignados (solo ve esas).
 3. Palomea a su cuadrilla y cambia a **½ día** quien corresponda. La gente prestada se agrega buscándola por nombre o clave.
-   Junto a cada persona se ve si ya tiene algo ese día (otra obra, otro supervisor o marcaje con cámara).
+   Junto a cada persona se ve si ya tiene algo ese día (otro proyecto, otro supervisor o marcaje con cámara).
 4. Escribe su PIN y toca **Enviar lista**. Se crean las asistencias y las horas igual que con WhatsApp.
-   Si vuelve a enviar la lista de esa obra y día, **reemplaza** la anterior (sirve para corregir).
+   Si vuelve a enviar la lista de ese proyecto y día, **reemplaza** la anterior (sirve para corregir).
 
 Para actividades internas (curso, taller) Operaciones debe asignarle también ese proyecto al supervisor.
 
@@ -175,7 +175,7 @@ Para actividades internas (curso, taller) Operaciones debe asignarle también es
 - Enlace personal con token secreto; **Generar enlace nuevo** invalida el anterior y revoca sus teléfonos.
 - Cada teléfono debe ser aprobado por Operaciones; la clave del teléfono se guarda cifrada (hash).
 - El PIN se bloquea 15 minutos tras 5 intentos fallidos.
-- La lista de obras, la cuadrilla y el GPS se validan en el servidor.
+- La lista de proyectos, la cuadrilla y el GPS se validan en el servidor.
 - Las huellas faciales no salen del servidor: el teléfono solo envía la huella del marcaje actual.
 
 ## Notas

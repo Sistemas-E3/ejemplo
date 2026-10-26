@@ -217,7 +217,7 @@ class HrFieldService(models.AbstractModel):
             raise UserError(_("Solo se puede pasar lista de hoy o de ayer."))
         project = owner.field_project_ids.filtered(lambda p: p.id == int(project_id or 0))
         if not project:
-            raise UserError(_("Esa obra no está asignada a ti."))
+            raise UserError(_("Ese proyecto no está asignado a ti."))
         crew, others = self._roll_people(owner)
         allowed = crew | others
         rows, seen = [], set()

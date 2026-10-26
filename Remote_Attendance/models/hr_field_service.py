@@ -119,7 +119,7 @@ class HrFieldService(models.AbstractModel):
     @api.model
     def _activate_projects(self, owner, pin, project_ids):
         if owner.field_role != 'supervisor':
-            raise UserError(_("Solo un supervisor puede activar obras."))
+            raise UserError(_("Solo un supervisor puede activar proyectos."))
         if not owner._field_check_pin(pin):
             return {'error': _("PIN incorrecto.")}
         allowed = owner.field_project_ids
@@ -173,15 +173,15 @@ class HrFieldService(models.AbstractModel):
         """Return (project, error dict) among the leader's active projects."""
         projects = leader._field_active_projects() if leader else self.env['project.project']
         if not projects:
-            return projects, {'error': _("Tu supervisor no tiene obras activas hoy.")}
+            return projects, {'error': _("Tu supervisor no tiene proyectos activos hoy.")}
         if project_id:
             project = projects.filtered(lambda p: p.id == int(project_id))
             if not project:
-                return project, {'error': _("Esa obra no está activa para tu supervisor.")}
+                return project, {'error': _("Ese proyecto no está activo para tu supervisor.")}
             return project, None
         if len(projects) == 1:
             return projects, None
-        return projects.browse(), {'error': _("Elige la obra."), 'need_project': True}
+        return projects.browse(), {'error': _("Elige el proyecto."), 'need_project': True}
 
     @api.model
     def _geo(self, latitude, longitude, device):
@@ -200,7 +200,7 @@ class HrFieldService(models.AbstractModel):
                kind=None, badge=None, overtime=None):
         """Mark the recognised employee.
 
-        ``kind`` is the button the supervisor pressed: ``in`` (entrada en obra), ``lunch_out``,
+        ``kind`` is the button the supervisor pressed: ``in`` (entrada en proyecto), ``lunch_out``,
         ``lunch_in`` or ``out``; without it, it toggles entrance/exit.
         ``overtime`` answers "¿Es tiempo extra?", asked when leaving late (``need_overtime``).
         Returns a dict for the kiosk: ``error`` or ``employee``, ``action``,
@@ -259,7 +259,7 @@ class HrFieldService(models.AbstractModel):
                     'state': attendance.field_state, 'reasons': []}
         if attendance:
             if attendance.field_project_id == project:
-                return {'error': _("Ya estás registrado en esa obra.")}
+                return {'error': _("Ya estás registrado en ese proyecto.")}
             # The worker is already at the new site: its geofence is checked on the new check-in.
             self._check_out(attendance, device, geo, face_distance, photo, list(reasons), has_gps,
                             check_geofence=False)
@@ -371,7 +371,7 @@ class HrFieldService(models.AbstractModel):
             return 0
         distance = int(gps_distance_m(latitude, longitude, project.field_latitude, project.field_longitude))
         if distance > (project.field_radius or 0):
-            reasons.append(_("Fuera de obra: a %s m", distance))
+            reasons.append(_("Fuera del proyecto: a %s m", distance))
         return distance
 
     @api.model

@@ -17,7 +17,7 @@
                         <field name="date"/>
                     </group>
                     <group>
-                        <field name="unassigned_block_count" string="Obras sin proyecto" invisible="not unassigned_block_count"/>
+                        <field name="unassigned_block_count" string="Actividades sin proyecto" invisible="not unassigned_block_count"/>
                         <field name="unmatched_count" string="Nombres sin identificar" invisible="not unmatched_count"/>
                     </group>
                 </group>
@@ -86,7 +86,7 @@
         <field name="name">hr.field.project.alias.list</field>
         <field name="model">hr.field.project.alias</field>
         <field name="arch" type="xml">
-            <list string="Obras recordadas" editable="bottom">
+            <list string="Proyectos recordados" editable="bottom">
                 <field name="name"/>
                 <field name="project_id"/>
             </list>
@@ -94,11 +94,11 @@
     </record>
 
     <record id="hr_field_project_alias_action" model="ir.actions.act_window">
-        <field name="name">Obras y actividades recordadas</field>
+        <field name="name">Proyectos y actividades recordados</field>
         <field name="res_model">hr.field.project.alias</field>
         <field name="view_mode">list</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Aún no hay obras recordadas</p>
+            <p class="o_view_nocontent_smiling_face">Aún no hay proyectos recordados</p>
             <p>Cuando eliges el proyecto de un presupuesto o de una actividad como "taller" al cargar una lista, Odoo lo recuerda aquí.</p>
         </field>
     </record>

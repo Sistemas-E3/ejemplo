@@ -200,7 +200,7 @@ class TestFieldRollRoutes(RollMixin, HttpCase):
                 'device_key': key, 'pin': '1234', 'date': '2026-09-28', 'project_id': self.foreign.id,
                 'entries': [{'employee_id': self.pedro.id, 'fraction': 1}],
             })
-            self.assertEqual(refused, {'error': 'Esa obra no está asignada a ti.'})
+            self.assertEqual(refused, {'error': 'Ese proyecto no está asignado a ti.'})
             state = self.make_jsonrpc_request(base + '/lista', {'device_key': key})
             self.assertEqual(state['registered'], {str(self.site_a.id): [{'employee_id': self.pedro.id, 'fraction': 1.0}]})
         page = self.url_open(base)

@@ -14,7 +14,7 @@
         check_out: "Salida",
         lunch_out: "Salida a comer",
         lunch_in: "Regreso de comer",
-        project: "Obra asignada",
+        project: "Proyecto asignado",
     };
 
     let deviceKey = null;
@@ -66,11 +66,11 @@
         }
         const names = (state.active_projects || []).map((p) => p.name);
         if (names.length) {
-            $("active-projects").textContent = "Obras de hoy: " + names.join(", ");
+            $("active-projects").textContent = "Proyectos de hoy: " + names.join(", ");
         } else if (state.role === "supervisor") {
-            $("active-projects").textContent = "Sin obras activas: toca «Obras de hoy»";
+            $("active-projects").textContent = "Sin proyectos activos: toca «Proyectos de hoy»";
         } else {
-            $("active-projects").textContent = "Tu supervisor no ha activado obras hoy";
+            $("active-projects").textContent = "Tu supervisor no ha activado proyectos hoy";
         }
         $("btn-projects").hidden = state.role !== "supervisor";
         $("btn-change").hidden = (state.active_projects || []).length < 2;
@@ -184,7 +184,7 @@
         }
         if (!roll.projects.length) {
             const option = document.createElement("option");
-            option.textContent = "Operaciones no te ha asignado obras";
+            option.textContent = "Operaciones no te ha asignado proyectos";
             select.appendChild(option);
         }
         if (roll.projects.some((p) => String(p.id) === current)) {
@@ -308,7 +308,7 @@
             toast("Palomea al menos a una persona", "error");
             return;
         }
-        if (!entries.length && !window.confirm("¿Quitar la lista de esta obra?")) {
+        if (!entries.length && !window.confirm("¿Quitar la lista de este proyecto?")) {
             return;
         }
         if (!$("roll-pin").value) {
@@ -697,7 +697,7 @@
     }
 
     // ------------------------------------------------------------------
-    // Comida registrada después (supervisor en otra obra a la hora de comer)
+    // Comida registrada después (supervisor en otro proyecto a la hora de comer)
     // ------------------------------------------------------------------
 
     let lunchDay = null;
@@ -805,7 +805,7 @@
         list.replaceChildren();
         const active = new Set((state.active_projects || []).map((p) => p.id));
         if (!(state.assignable_projects || []).length) {
-            list.textContent = "Operaciones no te ha asignado obras.";
+            list.textContent = "Operaciones no te ha asignado proyectos.";
         }
         for (const project of state.assignable_projects || []) {
             const label = document.createElement("label");
@@ -838,7 +838,7 @@
             state.active_projects = result.active_projects;
             renderActive();
             closePanel("panel-projects");
-            toast("Obras de hoy guardadas", "success");
+            toast("Proyectos de hoy guardados", "success");
         } catch (error) {
             toast(error.message, "error", 6000);
         }

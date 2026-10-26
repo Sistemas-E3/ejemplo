@@ -14,7 +14,7 @@ class HrFieldManualLoad(models.TransientModel):
     _description = "Cargar asistencias a mano"
 
     date = fields.Date("Día", required=True, default=fields.Date.context_today)
-    project_id = fields.Many2one('project.project', "Obra", required=True)
+    project_id = fields.Many2one('project.project', "Proyecto", required=True)
     supervisor_id = fields.Many2one(
         'hr.employee', "Supervisor", domain=[('field_role', '=', 'supervisor')],
         help="Al elegirlo se agrega su cuadrilla a la lista con él como supervisor que los trae.")
@@ -147,8 +147,8 @@ class HrFieldManualLine(models.TransientModel):
     supervisor_id = fields.Many2one(
         'hr.employee', "Supervisor que lo trae", domain=[('field_role', '=', 'supervisor')],
         compute='_compute_supervisor_id', store=True, readonly=False)
-    project_id = fields.Many2one('project.project', "Otra obra",
-                                 help="Solo si esta persona trabajó en una obra distinta a la de arriba.")
+    project_id = fields.Many2one('project.project', "Otro proyecto",
+                                 help="Solo si esta persona trabajó en un proyecto distinto al de arriba.")
     check_in = fields.Float("Entrada", default=lambda self: self.env['hr.attendance']._field_schedule()['day_start'])
     check_out = fields.Float("Salida", default=lambda self: self.env['hr.attendance']._field_schedule()['day_end'])
     lunch = fields.Boolean("Salió a comer", default=True,

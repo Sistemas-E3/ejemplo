@@ -32,13 +32,13 @@ class HrAttendance(models.Model):
     _inherit = 'hr.attendance'
 
     field_project_id = fields.Many2one(
-        'project.project', string="Obra", index='btree_not_null', tracking=True)
+        'project.project', string="Proyecto", index='btree_not_null', tracking=True)
     field_supervisor_id = fields.Many2one('hr.employee', string="Supervisor", readonly=True)
     field_state = fields.Selection(FIELD_STATES, string="Estado en campo", tracking=True, index=True)
     field_review_reason = fields.Text("Motivo de revisión", readonly=True)
     field_in_kind = fields.Selection([
         ('office', "Entrada en oficina"),
-        ('site', "Entrada en obra"),
+        ('site', "Entrada en proyecto"),
         ('lunch', "Regreso de comer"),
     ], string="Tipo de entrada", readonly=True)
     field_out_kind = fields.Selection([
@@ -54,8 +54,8 @@ class HrAttendance(models.Model):
     in_face_distance = fields.Float("Distancia facial entrada", digits=(4, 3), readonly=True,
                                     help="Menor es más parecido; vacío si marcó con PIN.")
     out_face_distance = fields.Float("Distancia facial salida", digits=(4, 3), readonly=True)
-    in_gps_distance = fields.Integer("Distancia a la obra entrada (m)", readonly=True)
-    out_gps_distance = fields.Integer("Distancia a la obra salida (m)", readonly=True)
+    in_gps_distance = fields.Integer("Distancia al proyecto entrada (m)", readonly=True)
+    out_gps_distance = fields.Integer("Distancia al proyecto salida (m)", readonly=True)
     field_overtime_state = fields.Selection([
         ('pending', "Por validar"),
         ('approved', "Aprobado"),
@@ -205,7 +205,7 @@ class HrAttendance(models.Model):
             lines -= stale
             for project, hours in wanted.items():
                 vals = {
-                    'name': _("Asistencia en obra"),
+                    'name': _("Asistencia en proyecto"),
                     'project_id': project.id,
                     'employee_id': attendance.employee_id.id,
                     'date': attendance.field_date,
