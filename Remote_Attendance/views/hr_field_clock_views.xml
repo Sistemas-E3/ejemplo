@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_clock_view_list" model="ir.ui.view">
+        <field name="name">hr.field.clock.list</field>
+        <field name="model">hr.field.clock</field>
+        <field name="arch" type="xml">
+            <list string="Checadores" decoration-warning="state == 'pending'" decoration-muted="state == 'revoked'">
+                <field name="name"/>
+                <field name="serial"/>
+                <field name="last_seen"/>
+                <field name="last_ip" optional="hide"/>
+                <field name="error_count" optional="show"/>
+                <field name="state" widget="badge" decoration-warning="state == 'pending'" decoration-success="state == 'approved'" decoration-danger="state == 'revoked'"/>
+                <button name="action_approve" type="object" string="Aprobar" icon="fa-check" invisible="state == 'approved'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_view_form" model="ir.ui.view">
+        <field name="name">hr.field.clock.form</field>
+        <field name="model">hr.field.clock</field>
+        <field name="arch" type="xml">
+            <form string="Checador">
+                <header>
+                    <button name="action_approve" type="object" string="Aprobar" class="btn-primary" invisible="state == 'approved'"/>
+                    <button name="action_revoke" type="object" string="Revocar" invisible="state != 'approved'"
+                            confirm="Odoo dejará de aceptar los marcajes de este checador. ¿Continuar?"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_logs" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="log_count" widget="statinfo" string="Registros"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="serial"/>
+                            <field name="tz"/>
+                        </group>
+                        <group>
+                            <field name="last_seen"/>
+                            <field name="last_ip"/>
+                            <field name="error_count"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        En el checador: Menú › Comunicación › Configuración del servidor en la nube (ADMS).
+                        Dirección del servidor: la de este Odoo; puerto 443 con HTTPS.
+                        En cada usuario del checador, el número de usuario es el número de registro del empleado en Odoo.
+                    </div>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_action" model="ir.actions.act_window">
+        <field name="name">Checadores</field>
+        <field name="res_model">hr.field.clock</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no se conecta ningún checador</p>
+            <p>Configura en el checador la dirección de este Odoo. Al conectarse aparece aquí como pendiente; apruébalo para que se acepten sus marcajes.</p>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_log_view_list" model="ir.ui.view">
+        <field name="name">hr.field.clock.log.list</field>
+        <field name="model">hr.field.clock.log</field>
+        <field name="arch" type="xml">
+            <list string="Registros del checador" create="false" edit="false"
+                  decoration-danger="state == 'error'" decoration-muted="state == 'ignored'">
+                <field name="punch_time"/>
+                <field name="employee_key"/>
+                <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="state" widget="badge" decoration-success="state in ('entry', 'exit')" decoration-danger="state == 'error'"/>
+                <field name="result"/>
+                <field name="clock_id" optional="hide"/>
+                <field name="verify" optional="hide"/>
+                <field name="attendance_id" optional="hide"/>
+                <button name="action_reprocess" type="object" string="Reintentar" icon="fa-refresh" invisible="state not in ('error', 'new')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_log_view_search" model="ir.ui.view">
+        <field name="name">hr.field.clock.log.search</field>
+        <field name="model">hr.field.clock.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="employee_key"/>
+                <field name="clock_id"/>
+                <filter name="error" string="Con error" domain="[('state', '=', 'error')]"/>
+                <group>
+                    <filter name="group_day" string="Día" context="{'group_by': 'punch_time:day'}"/>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_log_action" model="ir.actions.act_window">
+        <field name="name">Registros del checador</field>
+        <field name="res_model">hr.field.clock.log</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

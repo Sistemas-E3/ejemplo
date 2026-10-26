@@ -39,6 +39,8 @@
                         <field name="out_face_distance"/>
                         <field name="in_field_device_id"/>
                         <field name="out_field_device_id"/>
+                        <field name="in_field_clock_id" invisible="not in_field_clock_id"/>
+                        <field name="out_field_clock_id" invisible="not out_field_clock_id"/>
                     </group>
                     <field name="field_allocation_ids" colspan="2" invisible="not field_allocation_ids" readonly="1">
                         <list>

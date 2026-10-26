@@ -40,6 +40,7 @@ class HrAttendance(models.Model):
         ('office', "Entrada en oficina"),
         ('site', "Entrada en proyecto"),
         ('lunch', "Regreso de comer"),
+        ('clock', "Entrada en checador"),
     ], string="Tipo de entrada", readonly=True)
     field_out_kind = fields.Selection([
         ('lunch', "Salida a comer"),
@@ -49,6 +50,8 @@ class HrAttendance(models.Model):
                              help="Día de la entrada en la zona horaria del empleado.")
     in_field_device_id = fields.Many2one('hr.field.device', string="Teléfono de entrada", readonly=True)
     out_field_device_id = fields.Many2one('hr.field.device', string="Teléfono de salida", readonly=True)
+    in_field_clock_id = fields.Many2one('hr.field.clock', string="Checador de entrada", readonly=True)
+    out_field_clock_id = fields.Many2one('hr.field.clock', string="Checador de salida", readonly=True)
     in_field_photo = fields.Image("Foto de entrada", max_width=640, max_height=640, attachment=True, readonly=True)
     out_field_photo = fields.Image("Foto de salida", max_width=640, max_height=640, attachment=True, readonly=True)
     in_face_distance = fields.Float("Distancia facial entrada", digits=(4, 3), readonly=True,

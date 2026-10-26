@@ -3,3 +3,4 @@ from . import test_field_roster
 from . import test_field_roll
 from . import test_field_marks
 from . import test_field_manual
+from . import test_field_clock

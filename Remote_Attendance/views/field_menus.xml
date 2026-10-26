@@ -27,6 +27,10 @@
               action="project_project_field_action"/>
     <menuitem id="menu_field_devices" name="Teléfonos" parent="menu_field_root" sequence="4"
               action="hr_field_device_action"/>
+    <menuitem id="menu_field_clocks" name="Checadores" parent="menu_field_root" sequence="4"
+              action="hr_field_clock_action"/>
+    <menuitem id="menu_field_clock_logs" name="Registros del checador" parent="menu_field_root" sequence="4"
+              action="hr_field_clock_log_action"/>
     <menuitem id="menu_field_alias" name="Nombres recordados" parent="menu_field_root" sequence="5"
               action="hr_field_alias_action"/>
     <menuitem id="menu_field_project_alias" name="Proyectos recordados" parent="menu_field_root" sequence="6"
