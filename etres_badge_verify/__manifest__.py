@@ -1,5 +1,5 @@
 {
-    "name": "Etres - Verificación de gafete por QR",
+    "name": "QR para vigencia de gafetes",
     "summary": "QR en el gafete que valida en línea si el empleado sigue activo",
     "version": "18.0.1.0.0",
     "category": "Human Resources",
