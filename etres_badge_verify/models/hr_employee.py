@@ -1,7 +1,13 @@
 import base64
+import io
 import secrets
+import unicodedata
+import zipfile
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError
+
+BADGE_ZIP_NAME = "QR_Gafetes_Etres.zip"
 
 
 class HrEmployee(models.Model):
@@ -68,7 +74,13 @@ class HrEmployee(models.Model):
 
     def _badge_qr_filename(self):
         self.ensure_one()
-        safe = "".join(c if c.isalnum() else "_" for c in (self.name or "empleado"))
+        # Sin acentos ni ñ: el software de credenciales en Windows puede no leer UTF-8.
+        ascii_name = (
+            unicodedata.normalize("NFKD", self.name or "empleado")
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+        safe = "".join(c if c.isalnum() else "_" for c in ascii_name)
         prefix = self.barcode or str(self.id)
         return "%s_%s_QR.png" % (prefix, safe.strip("_"))
 
@@ -77,3 +89,39 @@ class HrEmployee(models.Model):
         for employee in self:
             employee.badge_token = employee._new_badge_token()
         return True
+
+    def action_download_badge_qr_zip(self):
+        """ZIP con el QR de cada empleado seleccionado.
+
+        Se entrega como adjunto en lugar de pasar los ids en la URL, que con
+        cientos de empleados rebasa el límite del servidor (error 414).
+        """
+        if not self.env.user.has_group("hr.group_hr_user"):
+            raise AccessError(_("Solo Recursos Humanos puede descargar los QR de gafetes."))
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for employee in self.with_context(active_test=False):
+                if employee.badge_token:
+                    archive.writestr(
+                        employee._badge_qr_filename(),
+                        base64.b64decode(employee.badge_qr),
+                    )
+        Attachment = self.env["ir.attachment"]
+        # Borra la descarga anterior del mismo usuario para no acumular archivos.
+        Attachment.search([
+            ("name", "=", BADGE_ZIP_NAME),
+            ("res_model", "=", "hr.employee"),
+            ("res_id", "=", False),
+            ("create_uid", "=", self.env.uid),
+        ]).unlink()
+        attachment = Attachment.create({
+            "name": BADGE_ZIP_NAME,
+            "raw": buffer.getvalue(),
+            "mimetype": "application/zip",
+            "res_model": "hr.employee",
+        })
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/web/content/%s?download=true" % attachment.id,
+            "target": "self",
+        }

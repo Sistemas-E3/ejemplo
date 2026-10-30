@@ -9,7 +9,8 @@ QUÉ HACE
 - No muestra CURP, NSS ni datos médicos.
 - Botón "Regenerar QR" para invalidar un gafete perdido.
 - Acción "Descargar QR de gafetes" (lista de empleados > seleccionar > Acción)
-  descarga un ZIP con los QR en PNG para cargarlos en Bodno.
+  descarga un ZIP con los QR en PNG para cargarlos en Bodno (nombres sin
+  acentos; funciona aunque se seleccionen todos los empleados).
 
 INSTALAR EN ODOO.SH
 1. Copiar la carpeta etres_badge_verify a la raíz del repositorio de Odoo.sh
