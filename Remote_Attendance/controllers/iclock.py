@@ -65,11 +65,18 @@ class FieldClock(http.Controller):
     @http.route(['/iclock/getrequest', '/iclock/getrequest.aspx'], type='http', auth='public', methods=['GET'],
                 csrf=False, save_session=False, sitemap=False)
     def getrequest(self, **kwargs):
-        # No commands for the clock: users and faces are registered on the clock itself.
-        self._clock()
+        # Pending orders (create or delete users) for an approved clock; faces are registered on the clock.
+        clock = self._clock()
+        if clock and clock.state == 'approved':
+            commands = clock._clock_next_commands()
+            if commands:
+                return self._text(commands + "\n")
         return self._text("OK")
 
     @http.route(['/iclock/devicecmd', '/iclock/devicecmd.aspx'], type='http', auth='public', methods=['POST'],
                 csrf=False, save_session=False, sitemap=False)
     def devicecmd(self, **kwargs):
+        clock = self._clock()
+        if clock and clock.state == 'approved':
+            clock._clock_command_results(request.httprequest.get_data(as_text=False).decode('utf-8', errors='replace'))
         return self._text("OK")

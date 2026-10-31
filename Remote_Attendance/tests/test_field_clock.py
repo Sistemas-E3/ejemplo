@@ -81,6 +81,32 @@ class TestFieldClock(TransactionCase):
         self.assertEqual(attendance.in_field_clock_id, self.clock)
         self.assertEqual(self.clock.log_ids.mapped('state'), ['exit', 'entry'])
 
+    def test_send_and_remove_employees(self):
+        office = self.env['hr.employee'].create({'name': 'Laura   Contabilidad', 'barcode': '3001'})
+        self.env['hr.employee'].create({'name': 'Sin clave'})
+        self.clock.action_send_employees()
+        commands = self.clock.command_ids
+        texts = commands.mapped('command')
+        self.assertIn("DATA UPDATE USERINFO PIN=1042\tName=Pedro Trabajador\tPri=0\tPasswd=\tCard=\tGrp=1"
+                      "\tTZ=0000000100000000\tVerify=0", texts)
+        self.assertIn("DATA UPDATE USERINFO PIN=3001\tName=Laura Contabilidad\tPri=0\tPasswd=\tCard=\tGrp=1"
+                      "\tTZ=0000000100000000\tVerify=0", texts)
+        self.assertFalse([t for t in texts if 'Sin clave' in t])
+
+        sent = self.clock._clock_next_commands()
+        self.assertEqual(len(sent.splitlines()), len(commands))
+        self.assertTrue(sent.startswith('C:'))
+        self.assertEqual(set(commands.mapped('state')), {'sent'})
+        first, second = commands.sorted('id')[:2]
+        self.clock._clock_command_results(f"ID={first.id}&Return=0&CMD=DATA\nID={second.id}&Return=-1&CMD=DATA\n")
+        self.assertEqual(first.state, 'done')
+        self.assertEqual(second.state, 'error')
+        self.assertEqual(self.clock._clock_next_commands(), '')
+
+        office.action_archive()
+        self.clock.action_remove_archived()
+        self.assertIn("DATA DELETE USERINFO PIN=3001", self.clock.command_ids.mapped('command'))
+
     def test_exit_on_the_phone_assigns_the_project(self):
         # Entrance at the clock leaves the day without project, like the office tablet.
         self.clock._clock_receive("1042\t2026-09-28 07:00:00\t0\t1\n")
@@ -115,3 +141,10 @@ class TestFieldClockHttp(HttpCase):
         self.assertEqual(clock.log_ids.state, 'entry')
         self.assertEqual(clock.att_stamp, '9999')
         self.assertEqual(self.url_open(f'/iclock/getrequest?SN={serial}').text, 'OK')
+
+        clock.action_send_employees()
+        command = clock.command_ids
+        response = self.url_open(f'/iclock/getrequest?SN={serial}')
+        self.assertEqual(response.text, f"C:{command.id}:{command.command}\n")
+        self.url_open(f'/iclock/devicecmd?SN={serial}', data=f"ID={command.id}&Return=0&CMD=DATA\n")
+        self.assertEqual(command.state, 'done')

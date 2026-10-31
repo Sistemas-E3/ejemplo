@@ -23,6 +23,10 @@
             <form string="Checador">
                 <header>
                     <button name="action_approve" type="object" string="Aprobar" class="btn-primary" invisible="state == 'approved'"/>
+                    <button name="action_send_employees" type="object" string="Enviar empleados activos" invisible="state != 'approved'"
+                            confirm="Se dará de alta o actualizará en el checador a cada empleado activo con número de registro. ¿Continuar?"/>
+                    <button name="action_remove_archived" type="object" string="Quitar dados de baja" invisible="state != 'approved'"
+                            confirm="Se borrará del checador a los empleados archivados en Odoo, con su rostro y huella. ¿Continuar?"/>
                     <button name="action_revoke" type="object" string="Revocar" invisible="state != 'approved'"
                             confirm="Odoo dejará de aceptar los marcajes de este checador. ¿Continuar?"/>
                     <field name="state" widget="statusbar"/>
@@ -43,8 +47,22 @@
                             <field name="last_seen"/>
                             <field name="last_ip"/>
                             <field name="error_count"/>
+                            <field name="pending_command_count"/>
                         </group>
                     </group>
+                    <notebook>
+                        <page string="Órdenes al checador" name="commands">
+                            <field name="command_ids" readonly="1">
+                                <list decoration-danger="state == 'error'" decoration-muted="state == 'done'">
+                                    <field name="create_date" string="Creada"/>
+                                    <field name="command"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="sent_on"/>
+                                    <field name="return_code" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                     <div class="text-muted">
                         En el checador: Menú › Comunicación › Configuración del servidor en la nube (ADMS).
                         Dirección del servidor: la de este Odoo; puerto 443 con HTTPS.
