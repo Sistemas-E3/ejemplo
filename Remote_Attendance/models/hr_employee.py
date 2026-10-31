@@ -158,6 +158,19 @@ class HrEmployee(models.Model):
             return self.browse()
         return self._field_staff()._field_keys().get(key, self.browse())
 
+    @api.model
+    def _field_clock_employee(self, key):
+        """Employee of a time clock user number: field staff first, then anyone (office staff)."""
+        employee = self._field_by_key(key)
+        if employee:
+            return employee
+        key = compact_key(key)
+        if not key:
+            return self.browse()
+        domain = [('field_role', '=', False), '|', ('barcode', '!=', False)]
+        domain += [('registration_number', '!=', False)] if 'registration_number' in self._fields else [('id', '=', 0)]
+        return self.search(domain)._field_keys().get(key, self.browse())
+
     def _field_check_pin(self, pin):
         """Check the employee PIN with lockout. Return True/False, raise when locked."""
         self.ensure_one()

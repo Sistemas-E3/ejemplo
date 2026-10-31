@@ -132,10 +132,10 @@ class HrFieldClockLog(models.Model):
         Employee = self.env['hr.employee'].sudo()
         service = self.env['hr.field.service'].sudo()
         for log in self.sorted(lambda l: (l.punch_time, l.id)):
-            employee = Employee._field_by_key(log.employee_key)
+            employee = Employee._field_clock_employee(log.employee_key)
             if not employee:
                 log.write({'state': 'error', 'employee_id': False, 'result': _(
-                    "La clave %s no es el número de registro de nadie del personal de campo.", log.employee_key)})
+                    "La clave %s no es el número de registro de ningún empleado.", log.employee_key)})
                 continue
             try:
                 with self.env.cr.savepoint():
@@ -157,8 +157,10 @@ class HrFieldServiceClock(models.AbstractModel):
     def _punch_clock(self, employee, clock, when):
         """Entrance or exit of ``employee`` at ``when`` (UTC) from the time clock, as the office tablet does:
         the first punch opens the day without project, the next one closes it.
+        Office staff (without field role) get a plain Odoo attendance: no project, review or overtime.
         Return (log state, detail, attendance)."""
         Attendance = self.env['hr.attendance']
+        field = bool(employee.field_role)
         repeat = timedelta(minutes=REPEAT_MINUTES)
         last = Attendance.search([('employee_id', '=', employee.id), ('check_in', '<=', when)],
                                  order='check_in desc', limit=1)
@@ -169,28 +171,29 @@ class HrFieldServiceClock(models.AbstractModel):
             day = pytz.utc.localize(when).astimezone(tz).date()
             if last.field_date and last.field_date < day:
                 # Forgot to punch out yesterday: closed without hours for HR to fix, and today starts anew.
-                last.write({'check_out': last.check_in, 'field_state': 'review'})
-                last._field_add_review_reason(_("Sin salida registrada: captura la hora de salida"))
+                if field:
+                    last.write({'check_out': last.check_in, 'field_state': 'review'})
+                    last._field_add_review_reason(_("Sin salida registrada: captura la hora de salida"))
+                else:
+                    last.write({'check_out': last.check_in})
             else:
-                late = last._field_needs_overtime_question(when)
-                last.write({
-                    'check_out': when,
-                    'field_out_kind': 'day',
-                    'field_overtime_state': 'pending' if late else False,
-                    'out_field_clock_id': clock.id,
-                })
+                vals = {'check_out': when, 'out_field_clock_id': clock.id}
+                if field:
+                    late = last._field_needs_overtime_question(when)
+                    vals.update(field_out_kind='day', field_overtime_state='pending' if late else False)
+                last.write(vals)
                 return 'exit', _("Salida"), last
         elif last and last.check_out > when:
             return 'ignored', _("Ya hay una asistencia que cubre esa hora."), last
         elif last and when - last.check_out < repeat:
             return 'ignored', _("Repetido: ya tenía salida a las %s.", self._local_time(employee, last.check_out)), last
-        attendance = Attendance.create({
+        vals = {
             'employee_id': employee.id,
             'check_in': when,
-            'field_supervisor_id': employee._field_leader().id,
-            'field_in_kind': 'clock',
-            'field_state': 'valid',
             'in_field_clock_id': clock.id,
             'in_mode': 'technical',
-        })
+        }
+        if field:
+            vals.update(field_supervisor_id=employee._field_leader().id, field_in_kind='clock', field_state='valid')
+        attendance = Attendance.create(vals)
         return 'entry', _("Entrada"), attendance

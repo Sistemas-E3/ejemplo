@@ -48,7 +48,7 @@
                     <div class="text-muted">
                         En el checador: Menú › Comunicación › Configuración del servidor en la nube (ADMS).
                         Dirección del servidor: la de este Odoo; puerto 443 con HTTPS.
-                        En cada usuario del checador, el número de usuario es el número de registro del empleado en Odoo.
+                        En cada usuario del checador, el número de usuario es el número de registro del empleado en Odoo (campo u oficina).
                     </div>
                 </sheet>
                 <chatter/>

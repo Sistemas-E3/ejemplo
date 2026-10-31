@@ -68,6 +68,19 @@ class TestFieldClock(TransactionCase):
         self.assertEqual(log.state, 'entry')
         self.assertEqual(log.employee_id, self.worker)
 
+    def test_office_staff_get_a_plain_attendance(self):
+        office = self.env['hr.employee'].create({'name': 'Laura Contabilidad', 'tz': TZ, 'barcode': '3001'})
+        self.clock._clock_receive("3001\t2026-09-28 08:58:00\t0\t15\n3001\t2026-09-28 19:10:00\t1\t15\n")
+        attendance = self.env['hr.attendance'].search([('employee_id', '=', office.id)])
+        self.assertEqual(len(attendance), 1)
+        self.assertEqual(attendance.check_in, datetime(2026, 9, 28, 14, 58))
+        self.assertEqual(attendance.check_out, datetime(2026, 9, 29, 1, 10))
+        self.assertFalse(attendance.field_state, "Office attendances stay out of the field review")
+        self.assertFalse(attendance.field_in_kind)
+        self.assertFalse(attendance.field_overtime_state)
+        self.assertEqual(attendance.in_field_clock_id, self.clock)
+        self.assertEqual(self.clock.log_ids.mapped('state'), ['exit', 'entry'])
+
     def test_exit_on_the_phone_assigns_the_project(self):
         # Entrance at the clock leaves the day without project, like the office tablet.
         self.clock._clock_receive("1042\t2026-09-28 07:00:00\t0\t1\n")
