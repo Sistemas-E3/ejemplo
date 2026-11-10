@@ -237,45 +237,80 @@ class HrFieldServiceClock(models.AbstractModel):
 
     @api.model
     def _punch_clock(self, employee, clock, when):
-        """Entrance or exit of ``employee`` at ``when`` (UTC) from the time clock, as the office tablet does:
-        the first punch opens the day without project, the next one closes it.
-        Office staff (without field role) get a plain Odoo attendance: no project, review or overtime.
+        """Entrance or exit of ``employee`` at ``when`` (UTC) from the time clock.
+
+        There is one day per person, whichever way it was marked: a clock punch on a day that already has
+        attendances (from the phone or imported late) is merged into them instead of creating another one.
+        Before the first entrance it becomes the entrance, after the exit of the day it becomes the exit,
+        and inside a marked period it is already covered. Without attendances that day it opens one without
+        project, as the office tablet does. Office staff (without field role) get a plain Odoo attendance.
         Return (log state, detail, attendance)."""
         Attendance = self.env['hr.attendance']
         field = bool(employee.field_role)
         repeat = timedelta(minutes=REPEAT_MINUTES)
-        last = Attendance.search([('employee_id', '=', employee.id), ('check_in', '<=', when)],
-                                 order='check_in desc', limit=1)
-        if last and not last.check_out:
+        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        day = pytz.utc.localize(when).astimezone(tz).date()
+
+        # Forgot to punch out on a previous day: closed without hours for HR to fix.
+        for stale in Attendance.search([('employee_id', '=', employee.id), ('check_out', '=', False),
+                                        ('field_date', '<', day)]):
+            if field:
+                stale.write({'check_out': stale.check_in, 'field_state': 'review'})
+                stale._field_add_review_reason(_("Sin salida registrada: captura la hora de salida"))
+            else:
+                stale.write({'check_out': stale.check_in})
+
+        today = Attendance.search([('employee_id', '=', employee.id), ('field_date', '=', day),
+                                   ('field_state', '!=', 'rejected')], order='check_in')
+        if not today:
+            return 'entry', _("Entrada"), self._clock_new_attendance(employee, clock, when)
+        first, last = today[0], today[-1]
+        if when < first.check_in:
+            vals = {'check_in': when, 'in_field_clock_id': clock.id}
+            if field and first.field_in_kind != 'lunch':
+                vals['field_in_kind'] = 'clock'
+            first.write(vals)
+            return 'entry', _("Entrada (unida a la asistencia del día)"), first
+        if not last.check_out and when >= last.check_in:
             if when - last.check_in < repeat:
                 return 'ignored', _("Repetido: ya tenía entrada a las %s.", self._local_time(employee, last.check_in)), last
-            tz = pytz.timezone(employee._get_tz() or 'UTC')
-            day = pytz.utc.localize(when).astimezone(tz).date()
-            if last.field_date and last.field_date < day:
-                # Forgot to punch out yesterday: closed without hours for HR to fix, and today starts anew.
-                if field:
-                    last.write({'check_out': last.check_in, 'field_state': 'review'})
-                    last._field_add_review_reason(_("Sin salida registrada: captura la hora de salida"))
-                else:
-                    last.write({'check_out': last.check_in})
-            else:
-                vals = {'check_out': when, 'out_field_clock_id': clock.id}
-                if field:
-                    late = last._field_needs_overtime_question(when)
-                    vals.update(field_out_kind='day', field_overtime_state='pending' if late else False)
-                last.write(vals)
-                return 'exit', _("Salida"), last
-        elif last and last.check_out > when:
-            return 'ignored', _("Ya hay una asistencia que cubre esa hora."), last
-        elif last and when - last.check_out < repeat:
+            vals = {'check_out': when, 'out_field_clock_id': clock.id}
+            if field:
+                late = last._field_needs_overtime_question(when)
+                vals.update(field_out_kind='day', field_overtime_state='pending' if late else False)
+            last.write(vals)
+            return 'exit', _("Salida"), last
+        covering = today.filtered(lambda a: a.check_in <= when <= (a.check_out or when))
+        if covering:
+            return 'ignored', _("Ya está cubierto por la asistencia de %s a %s.",
+                                self._local_time(employee, covering[0].check_in),
+                                self._local_time(employee, covering[0].check_out) if covering[0].check_out else '…'), covering[0]
+        if not last.check_out or when < last.check_out:
+            return 'ignored', _("Cae entre dos asistencias del día (comida)."), last
+        if last.out_field_clock_id and when - last.check_out < repeat:
             return 'ignored', _("Repetido: ya tenía salida a las %s.", self._local_time(employee, last.check_out)), last
+        if field and last.field_out_kind != 'lunch':
+            # Left the site with the supervisor and punched out later at the clock: the day ends here.
+            vals = {'check_out': when, 'out_field_clock_id': clock.id}
+            if last._field_needs_overtime_question(when) and not last.field_overtime_state:
+                vals['field_overtime_state'] = 'pending'
+            last.write(vals)
+            return 'exit', _("Salida (unida a la asistencia del día)"), last
+        attendance = self._clock_new_attendance(employee, clock, when, after=last)
+        return 'entry', _("Regreso de comer") if field else _("Entrada"), attendance
+
+    @api.model
+    def _clock_new_attendance(self, employee, clock, when, after=None):
         vals = {
             'employee_id': employee.id,
             'check_in': when,
             'in_field_clock_id': clock.id,
             'in_mode': 'technical',
         }
-        if field:
+        if employee.field_role:
             vals.update(field_supervisor_id=employee._field_leader().id, field_in_kind='clock', field_state='valid')
-        attendance = Attendance.create(vals)
-        return 'entry', _("Entrada"), attendance
+            if after:
+                # Back from lunch: same project and supervisor as the morning.
+                vals.update(field_in_kind='lunch', field_project_id=after.field_project_id.id,
+                            field_supervisor_id=after.field_supervisor_id.id or vals['field_supervisor_id'])
+        return self.env['hr.attendance'].create(vals)

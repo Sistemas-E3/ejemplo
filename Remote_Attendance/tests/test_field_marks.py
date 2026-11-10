@@ -112,7 +112,10 @@ class TestFieldMarks(TransactionCase):
 
         with self._at(12, 0):
             result = self._punch(self.supervisor, descriptor=vector(1.0), kind='in')
-            self.assertIn('error', result, "The entrance is already open")
+            self.assertEqual(result['action'], 'project', "Entrada at the site sets the project of the office entrance")
+            self.assertEqual(len(self._attendances(self.worker)), 1)
+            self.assertIn('error', self._punch(self.supervisor, descriptor=vector(1.0), kind='in'),
+                          "With the project set, the entrance is already open")
             result = self._punch(self.supervisor, descriptor=vector(1.0), kind='lunch_out')
         self.assertEqual(result['action'], 'lunch_out')
         self.assertEqual(entrance.field_project_id, self.project_a, "Hours go to the site where they mark")

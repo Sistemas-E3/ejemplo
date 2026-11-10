@@ -229,12 +229,14 @@ class HrFieldService(models.AbstractModel):
         # Hours go to the site of whoever marks: on a supervisor's phone, his active projects.
         leader = owner if owner.field_role == 'supervisor' else employee._field_leader()
 
-        if kind in ('in', 'lunch_in') and attendance:
+        # Entered at the clock or the office tablet (no project yet): "Entrada" here sets the project.
+        assign_project = kind == 'in' and attendance and not attendance.field_project_id and not change_project
+        if kind in ('in', 'lunch_in') and attendance and not assign_project:
             return {'error': _("%(name)s ya tiene entrada desde las %(time)s. Marca primero su salida.",
                                name=employee.name, time=self._local_time(employee, attendance.check_in))}
         if kind in ('lunch_out', 'out') and not attendance:
             return {'error': _("%s no tiene entrada abierta hoy.", employee.name)}
-        if attendance and not change_project:
+        if attendance and not change_project and not assign_project:
             if not attendance.field_project_id:
                 # Entered at the office: the hours go to the site where they mark the exit.
                 project, error = self._pick_project(leader, project_id)

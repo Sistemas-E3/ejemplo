@@ -2,6 +2,8 @@ import base64
 import io
 from datetime import datetime
 
+from freezegun import freeze_time
+
 from odoo.exceptions import UserError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
@@ -151,6 +153,62 @@ class TestFieldClock(TransactionCase):
         content = "Número de empleado;Fecha/Hora\n1042;2026-09-28 07:00:00\n".encode()
         self._import(content, 'marcajes.csv')
         self.assertEqual(self._attendances().check_in, datetime(2026, 9, 28, 13, 0))
+
+    def _phone_attendance(self, check_in, check_out, project, out_kind='day', in_kind='site'):
+        return self.env['hr.attendance'].create({
+            'employee_id': self.worker.id, 'check_in': check_in, 'check_out': check_out,
+            'field_project_id': project.id, 'field_supervisor_id': self.supervisor.id,
+            'field_in_kind': in_kind, 'field_out_kind': out_kind, 'field_state': 'valid',
+        })
+
+    def test_clock_import_merges_with_phone_day(self):
+        project = self.env['project.project'].create({'name': 'Proyecto Norte'})
+        # Phone: 08:00 to 16:00 local at the site.
+        phone = self._phone_attendance(datetime(2026, 9, 28, 14), datetime(2026, 9, 28, 22), project)
+        # Clock at the workshop, imported later: 07:00 entrance and 17:05 exit.
+        self.clock._clock_receive("1042\t2026-09-28 07:00:00\n1042\t2026-09-28 17:05:00\n")
+        self.assertEqual(self._attendances(), phone, "No duplicate attendance")
+        self.assertEqual(phone.check_in, datetime(2026, 9, 28, 13))
+        self.assertEqual(phone.check_out, datetime(2026, 9, 28, 23, 5))
+        self.assertEqual(phone.field_project_id, project)
+        self.assertEqual(phone.field_in_kind, 'clock')
+        self.assertEqual(self.clock.log_ids.mapped('state'), ['exit', 'entry'])
+
+    def test_clock_import_with_phone_lunch(self):
+        project = self.env['project.project'].create({'name': 'Proyecto Norte'})
+        morning = self._phone_attendance(datetime(2026, 9, 28, 14), datetime(2026, 9, 28, 19), project, out_kind='lunch')
+        afternoon = self._phone_attendance(datetime(2026, 9, 28, 20), datetime(2026, 9, 28, 23), project, in_kind='lunch')
+        self.clock._clock_receive("1042\t2026-09-28 07:30:00\n1042\t2026-09-28 13:30:00\n"
+                                  "1042\t2026-09-28 15:00:00\n1042\t2026-09-28 17:20:00\n")
+        self.assertEqual(self._attendances(), morning | afternoon)
+        self.assertEqual(morning.check_in, datetime(2026, 9, 28, 13, 30))
+        self.assertEqual(afternoon.check_out, datetime(2026, 9, 28, 23, 20))
+        states = self.clock.log_ids.sorted('punch_time').mapped('state')
+        self.assertEqual(states, ['entry', 'ignored', 'ignored', 'exit'])
+
+    def test_clock_lunch_return_keeps_project(self):
+        project = self.env['project.project'].create({'name': 'Proyecto Norte'})
+        morning = self._phone_attendance(datetime(2026, 9, 28, 13), datetime(2026, 9, 28, 19), project, out_kind='lunch')
+        self.clock._clock_receive("1042\t2026-09-28 14:00:00\n")
+        afternoon = self._attendances() - morning
+        self.assertEqual(afternoon.field_in_kind, 'lunch')
+        self.assertEqual(afternoon.field_project_id, project)
+
+    @freeze_time('2026-09-28 15:00:00')
+    def test_phone_entrance_sets_project_of_clock_attendance(self):
+        project = self.env['project.project'].create({'name': 'Proyecto Norte'})
+        self.supervisor.write({'field_project_ids': [(6, 0, project.ids)], 'pin': '1234'})
+        self.env['hr.field.face'].create({'employee_id': self.worker.id, 'descriptor': str([1.0] + [0.0] * 127)})
+        self.supervisor.action_field_regenerate_token()
+        device, _key = self.env['hr.field.device']._field_register(self.supervisor, 'Tel', 'test')
+        device.action_approve()
+        self.clock._clock_receive("1042\t2026-09-28 08:30:00\n")
+        result = self.env['hr.field.service'].sudo()._punch(
+            self.supervisor, device, descriptor=[1.0] + [0.0] * 127, kind='in', latitude=None, longitude=None)
+        self.assertEqual(result.get('action'), 'project', result)
+        attendance = self._attendances()
+        self.assertEqual(len(attendance), 1)
+        self.assertEqual(attendance.field_project_id, project)
 
     def test_exit_on_the_phone_assigns_the_project(self):
         # Entrance at the clock leaves the day without project, like the office tablet.
