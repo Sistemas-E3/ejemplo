@@ -16,3 +16,4 @@ access_hr_field_timesheet_list_line_ops,hr.field.timesheet.list.line operaciones
 access_hr_field_clock_ops,hr.field.clock operaciones,model_hr_field_clock,group_field_operations,1,1,1,1
 access_hr_field_clock_log_ops,hr.field.clock.log operaciones,model_hr_field_clock_log,group_field_operations,1,1,0,0
 access_hr_field_clock_command_ops,hr.field.clock.command operaciones,model_hr_field_clock_command,group_field_operations,1,0,0,1
+access_hr_field_clock_import_ops,hr.field.clock.import operaciones,model_hr_field_clock_import,group_field_operations,1,1,1,1

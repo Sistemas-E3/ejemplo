@@ -1,6 +1,6 @@
 {
     'name': 'Asistencias en campo',
-    'version': '18.0.1.6.0',
+    'version': '18.0.1.7.0',
     'category': 'Human Resources/Attendances',
     'summary': 'Marcaje con reconocimiento facial y GPS desde el teléfono, ligado al proyecto y a sus horas',
     'description': """

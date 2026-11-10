@@ -10,3 +10,4 @@ from . import hr_field_service
 from . import project_project
 from . import hr_field_day
 from . import hr_field_clock
+from . import hr_field_clock_import

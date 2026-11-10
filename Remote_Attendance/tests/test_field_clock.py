@@ -1,5 +1,8 @@
+import base64
+import io
 from datetime import datetime
 
+from odoo.exceptions import UserError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
 TZ = 'America/Mexico_City'
@@ -106,6 +109,48 @@ class TestFieldClock(TransactionCase):
         office.action_archive()
         self.clock.action_remove_archived()
         self.assertIn("DATA DELETE USERINFO PIN=3001", self.clock.command_ids.mapped('command'))
+
+    def _import(self, content, filename, clock=None):
+        wizard = self.env['hr.field.clock.import'].create({
+            'file': base64.b64encode(content), 'filename': filename, 'clock_id': clock and clock.id,
+        })
+        return wizard.action_import()
+
+    def test_import_usb_attlog(self):
+        content = (b"     1042\t2026-09-28 06:55:00\t1\t0\t1\t0\r\n"
+                   b"     1042\t2026-09-28 17:02:00\t1\t1\t1\t0\r\n"
+                   b"     9999\t2026-09-28 07:10:00\t1\t0\t1\t0\r\n")
+        action = self._import(content, '1_attlog.dat')
+        attendance = self._attendances()
+        self.assertEqual(attendance.check_in, datetime(2026, 9, 28, 12, 55))
+        self.assertEqual(attendance.check_out, datetime(2026, 9, 28, 23, 2))
+        clock = attendance.in_field_clock_id
+        self.assertEqual(clock.serial, 'ARCHIVO')
+        self.assertEqual(sorted(clock.log_ids.mapped('state')), ['entry', 'error', 'exit'])
+        self.assertEqual(len(action['domain'][0][2]), 3)
+        with self.assertRaises(UserError):
+            self._import(content, '1_attlog.dat')  # already imported
+
+    def test_import_excel_with_date_and_time_columns(self):
+        import openpyxl
+        book = openpyxl.Workbook()
+        sheet = book.active
+        sheet.append(['Reporte de marcajes'])
+        sheet.append(['No.', 'Nombre', 'Fecha', 'Hora'])
+        sheet.append([1042, 'Pedro', '28/09/2026', '07:00'])
+        sheet.append([1042, 'Pedro', '28/09/2026', '19:00'])
+        buffer = io.BytesIO()
+        book.save(buffer)
+        self._import(buffer.getvalue(), 'marcajes.xlsx', self.clock)
+        attendance = self._attendances()
+        self.assertEqual(attendance.check_in, datetime(2026, 9, 28, 13, 0))
+        self.assertEqual(attendance.field_overtime_state, 'pending')
+        self.assertEqual(attendance.in_field_clock_id, self.clock)
+
+    def test_import_csv_with_datetime_column(self):
+        content = "Número de empleado;Fecha/Hora\n1042;2026-09-28 07:00:00\n".encode()
+        self._import(content, 'marcajes.csv')
+        self.assertEqual(self._attendances().check_in, datetime(2026, 9, 28, 13, 0))
 
     def test_exit_on_the_phone_assigns_the_project(self):
         # Entrance at the clock leaves the day without project, like the office tablet.

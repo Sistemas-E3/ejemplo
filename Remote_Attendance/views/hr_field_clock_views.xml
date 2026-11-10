@@ -125,4 +125,34 @@
         <field name="res_model">hr.field.clock.log</field>
         <field name="view_mode">list</field>
     </record>
+
+    <record id="hr_field_clock_import_view_form" model="ir.ui.view">
+        <field name="name">hr.field.clock.import.form</field>
+        <field name="model">hr.field.clock.import</field>
+        <field name="arch" type="xml">
+            <form string="Importar marcajes del checador">
+                <div class="text-muted mb-3">
+                    En el checador: <b>Menú › Administrador USB › Descargar › Marcajes</b>. Sube aquí el archivo que queda
+                    en la memoria (termina en <i>attlog.dat</i>). También acepta Excel o CSV con el número de empleado y la
+                    fecha y hora. Lo que ya se importó antes no se duplica.
+                </div>
+                <group>
+                    <field name="file" filename="filename"/>
+                    <field name="filename" invisible="1"/>
+                    <field name="clock_id" options="{'no_create': True}" placeholder="Importado de archivo"/>
+                </group>
+                <footer>
+                    <button name="action_import" type="object" string="Importar" class="btn-primary"/>
+                    <button special="cancel" string="Cancelar"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="hr_field_clock_import_action" model="ir.actions.act_window">
+        <field name="name">Importar marcajes del checador</field>
+        <field name="res_model">hr.field.clock.import</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
 </odoo>
