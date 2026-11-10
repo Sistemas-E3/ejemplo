@@ -168,7 +168,7 @@ class FieldAttendance(http.Controller):
         """Register the faces of all the field staff from the photo of their employee record."""
         if not request.env.user.has_group('Remote_Attendance.group_field_operations'):
             raise AccessError(_("Solo Operaciones puede registrar rostros."))
-        staff = request.env['hr.employee']._field_staff().sorted('name')
+        staff = request.env['hr.employee']._field_people().sorted('name')
         # Employees without a photo get a generated SVG avatar: only real pictures are useful.
         photos = request.env['ir.attachment'].sudo().search([
             ('res_model', '=', 'hr.employee'), ('res_field', '=', 'image_1920'),

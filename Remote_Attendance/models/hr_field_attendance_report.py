@@ -60,7 +60,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
         if scope == 'field':
             domain.append(('field_role', 'in', ('supervisor', 'worker')))
         elif scope == 'office':
-            domain.append(('field_role', '=', False))
+            domain.append(('field_role', 'in', (False, 'staff')))
         if filters.get('supervisor_id'):
             supervisor = int(filters['supervisor_id'])
             domain += ['|', ('field_supervisor_id', '=', supervisor), ('id', '=', supervisor)]
@@ -137,6 +137,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
         for employee in employees:
             tz = pytz.timezone(employee._get_tz() or 'UTC')
             workdays = self._workdays(employee)
+            crew = employee.field_role in ('supervisor', 'worker')
             # No absences before the person joined.
             hired_on = (employee.first_contract_date if 'first_contract_date' in employee._fields else False) \
                 or employee.create_date.date()
@@ -156,13 +157,13 @@ class HrFieldAttendanceReport(models.AbstractModel):
                         cell['out'] = pytz.utc.localize(last.check_out).astimezone(tz).strftime('%H:%M')
                     regular = sum(marks.mapped('field_regular_hours'))
                     overtime = sum(a.field_overtime_hours for a in marks
-                                   if a.field_overtime_state == 'approved' or not employee.field_role)
+                                   if a.field_overtime_state == 'approved' or not crew)
                     cell['hours'] = round(regular + overtime, 2)
                     # Orange dot: something to check (in review, no exit, field day without project).
                     cell['flag'] = any(
                         a.field_state == 'review'
                         or (not a.check_out and day < today)
-                        or (a.check_out and employee.field_role and not (a.field_project_id or a.field_allocation_ids))
+                        or (a.check_out and crew and not (a.field_project_id or a.field_allocation_ids))
                         for a in marks)
                     totals['A'] += 1
                     totals['R'] += cell['code'] == 'R'

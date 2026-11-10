@@ -8,7 +8,8 @@
     const base = "/campo/" + encodeURIComponent(token);
     const storageKey = "field_attendance_device_" + token;
     const $ = (id) => document.getElementById(id);
-    const isOffice = app.dataset.role === "office";
+    const isOffice = ["office", "staff"].includes(app.dataset.role);
+    const isStaff = app.dataset.role === "staff";
     const ACTIONS = {
         check_in: "Entrada",
         check_out: "Salida",
@@ -59,7 +60,9 @@
 
     function renderActive() {
         if (isOffice) {
-            $("active-projects").textContent = "Entrada en oficina: ponte frente a la cámara o pasa tu tarjeta";
+            $("active-projects").textContent = isStaff
+                ? "Ponte frente a la cámara para marcar tu entrada o salida"
+                : "Entrada en oficina: ponte frente a la cámara o pasa tu tarjeta";
             $("btn-projects").hidden = true;
             $("btn-change").hidden = true;
             return;
@@ -354,7 +357,11 @@
             return;
         }
         kioskStarted = true;
-        if (isOffice) {
+        if (isStaff) {
+            // Office staff on their own phone: automatic like the tablet, keeping where they marked.
+            $("punch-kinds").hidden = true;
+            watchGps();
+        } else if (isOffice) {
             $("gps-status").hidden = true;
             $("punch-kinds").hidden = true;
             $("btn-office-pin").hidden = false;
@@ -539,6 +546,10 @@
                     if (descriptor) {
                         $("camera-hint").textContent = "Reconociendo…";
                         pending = { device_key: deviceKey, descriptor: descriptor, photo: snapshot($("video"), $("canvas")) };
+                        if (isStaff && position) {
+                            pending.latitude = position.latitude;
+                            pending.longitude = position.longitude;
+                        }
                         await send();
                     }
                 } catch (error) {

@@ -23,9 +23,11 @@ class HrEmployee(models.Model):
     field_role = fields.Selection([
         ('supervisor', "Supervisor de campo"),
         ('worker', "Trabajador de campo"),
+        ('staff', "Personal de oficina"),
         ('office', "Kiosco de oficina"),
     ], string="Rol en campo", groups=OPS_GROUP, tracking=True,
-        help="Kiosco de oficina: el enlace de la tablet de la entrada; reconoce a todo el personal de campo "
+        help="Personal de oficina: marca con su rostro desde su enlace o en la tablet, sin proyecto. "
+             "Kiosco de oficina: el enlace de la tablet de la entrada; reconoce a todo el personal "
              "y acepta la tarjeta (ID de credencial).")
     field_supervisor_id = fields.Many2one(
         'hr.employee', string="Supervisor de su cuadrilla", groups=OPS_GROUP, tracking=True,
@@ -131,6 +133,16 @@ class HrEmployee(models.Model):
         """Everybody who marks attendance in the field (supervisors and workers)."""
         return self.search([('field_role', 'in', ('supervisor', 'worker'))])
 
+    @api.model
+    def _field_people(self):
+        """Everybody who marks with their face: field staff and office staff."""
+        return self.search([('field_role', 'in', ('supervisor', 'worker', 'staff'))])
+
+    def _field_is_crew(self):
+        """Field staff: their days go to projects, with review and overtime to validate."""
+        self.ensure_one()
+        return self.field_role in ('supervisor', 'worker')
+
     def _field_candidates(self):
         """Employees that can be recognised on this owner's link.
 
@@ -140,7 +152,7 @@ class HrEmployee(models.Model):
         if self.field_role == 'supervisor':
             return self | self.field_crew_ids.filtered('active') | self._field_staff()
         if self.field_role == 'office':
-            return self._field_staff()
+            return self._field_people()
         return self
 
     def _field_keys(self):
@@ -156,7 +168,7 @@ class HrEmployee(models.Model):
         key = compact_key(key)
         if not key:
             return self.browse()
-        return self._field_staff()._field_keys().get(key, self.browse())
+        return self._field_people()._field_keys().get(key, self.browse())
 
     @api.model
     def _field_clock_employee(self, key):

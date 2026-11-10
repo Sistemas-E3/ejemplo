@@ -346,6 +346,47 @@ class TestFieldMarks(TransactionCase):
         self.assertEqual({p['id'] for p in roll['crew']}, {self.supervisor.id, self.worker.id})
 
 
+    def test_office_staff_mark_with_their_face(self):
+        staff = self.env['hr.employee'].create({'name': 'Laura Contabilidad', 'field_role': 'staff', 'tz': TZ})
+        self.env['hr.field.face'].create({'employee_id': staff.id, 'descriptor': str(vector(3.0))})
+        staff.action_field_regenerate_token()
+        device, _key = self.env['hr.field.device']._field_register(staff, 'Tel', 'test')
+        device.action_approve()
+        self.assertEqual(staff._field_candidates(), staff, "Their link only recognises them")
+        with self._at(8, 55):
+            result = self.service._punch(staff, device, descriptor=vector(3.0), latitude=19.43, longitude=-99.13)
+        self.assertEqual(result['action'], 'check_in')
+        attendance = self._attendances(staff)
+        self.assertFalse(attendance.field_state, "Office staff get a plain attendance, without field review")
+        self.assertFalse(attendance.field_project_id)
+        self.assertAlmostEqual(attendance.in_latitude, 19.43)
+        with self._at(9, 5):
+            self.assertEqual(self.service._punch(staff, device, descriptor=vector(3.0))['action'], 'repeat')
+        with self._at(18, 0):
+            result = self.service._punch(staff, device, descriptor=vector(3.0), latitude=19.43, longitude=-99.13)
+        self.assertEqual(result['action'], 'check_out')
+        self.assertEqual(attendance.check_out - attendance.check_in, timedelta(hours=9, minutes=5))
+        self.assertFalse(attendance.field_timesheet_ids, "No timesheet for office staff")
+        # Someone else's face is not accepted on her link.
+        with self._at(18, 30):
+            self.assertIn('error', self.service._punch(staff, device, descriptor=vector(1.0)))
+
+    def test_office_tablet_recognises_office_staff(self):
+        staff = self.env['hr.employee'].create({'name': 'Laura Contabilidad', 'field_role': 'staff', 'tz': TZ,
+                                                'barcode': 'E3001'})
+        self.env['hr.field.face'].create({'employee_id': staff.id, 'descriptor': str(vector(3.0))})
+        self.assertIn(staff, self.office._field_candidates())
+        with self._at(8, 0):
+            self.assertEqual(self._office(descriptor=vector(3.0))['employee'], 'Laura Contabilidad')
+        with self._at(17, 0):
+            self.assertEqual(self._office(badge='E3001')['action'], 'check_out')
+        attendance = self._attendances(staff)
+        self.assertEqual(len(attendance), 1)
+        self.assertFalse(attendance.field_state)
+        self.assertEqual(self.env['hr.employee']._field_clock_employee('E3001'), staff,
+                         "The time clock finds office staff too")
+
+
 @tagged('post_install', '-at_install')
 class TestFieldMarksRoutes(HttpCase):
 

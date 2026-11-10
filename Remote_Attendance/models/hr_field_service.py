@@ -218,8 +218,9 @@ class HrFieldService(models.AbstractModel):
                 return {'error': _("No te reconocí. Acércate a la cámara con buena luz e intenta de nuevo.")}
             return {'error': _("No te reconocí. Intenta de nuevo o marca con tu PIN."), 'need_pin': True}
         photo = clean_photo(photo)
-        if owner.field_role == 'office':
-            return self._punch_office(employee, device, face_distance, photo, reasons)
+        if owner.field_role in ('office', 'staff'):
+            return self._punch_office(employee, device, face_distance, photo, reasons,
+                                      latitude=latitude, longitude=longitude)
 
         has_gps = latitude is not None and longitude is not None
         latitude = float(latitude) if has_gps else False
@@ -292,9 +293,12 @@ class HrFieldService(models.AbstractModel):
         }
 
     @api.model
-    def _punch_office(self, employee, device, face_distance, photo, reasons):
-        """Office tablet: entrance without project (the site is set when they mark at the site)."""
-        geo = self._geo(False, False, device)
+    def _punch_office(self, employee, device, face_distance, photo, reasons, latitude=None, longitude=None):
+        """Office tablet or personal link of office staff: entrance without project, then exit.
+        Field staff get the site when they mark at the site; office staff get a plain attendance."""
+        has_gps = latitude is not None and longitude is not None
+        geo = self._geo(float(latitude) if has_gps else False, float(longitude) if has_gps else False, device)
+        crew = employee._field_is_crew()
         attendance = self._open_attendance(employee)
         now = fields.Datetime.now()
         if attendance:
@@ -307,6 +311,16 @@ class HrFieldService(models.AbstractModel):
                     'state': attendance.field_state,
                     'reasons': [],
                 }
+            if not crew:
+                attendance.write({
+                    'check_out': now,
+                    'out_field_device_id': device.id,
+                    'out_field_photo': photo,
+                    'out_face_distance': face_distance or 0.0,
+                    **{f'out_{key}': value for key, value in geo.items()},
+                })
+                return {'employee': employee.name, 'action': 'check_out', 'project': '',
+                        'state': attendance.field_state, 'reasons': reasons}
             # Nobody answers on the office tablet: a late exit goes to HR as overtime to validate.
             late = attendance._field_needs_overtime_question(now)
             return self._check_out(attendance, device, geo, face_distance, photo, reasons, True,
@@ -314,22 +328,25 @@ class HrFieldService(models.AbstractModel):
         vals = {
             'employee_id': employee.id,
             'check_in': now,
-            'field_supervisor_id': employee._field_leader().id,
-            'field_in_kind': 'office',
-            'field_state': 'review' if reasons else 'valid',
-            'field_review_reason': '\n'.join(reasons) or False,
             'in_field_device_id': device.id,
             'in_field_photo': photo,
             'in_face_distance': face_distance or 0.0,
             **{f'in_{key}': value for key, value in geo.items()},
         }
+        if crew:
+            vals.update({
+                'field_supervisor_id': employee._field_leader().id,
+                'field_in_kind': 'office',
+                'field_state': 'review' if reasons else 'valid',
+                'field_review_reason': '\n'.join(reasons) or False,
+            })
         self.env['hr.attendance'].create(vals)
         return {
             'employee': employee.name,
             'action': 'check_in',
             'time': self._local_time(employee, now),
             'project': '',
-            'state': vals['field_state'],
+            'state': vals.get('field_state') or 'valid',
             'reasons': reasons,
         }
 

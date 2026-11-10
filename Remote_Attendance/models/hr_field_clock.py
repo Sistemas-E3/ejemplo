@@ -60,7 +60,7 @@ class HrFieldClock(models.Model):
 
     def _clock_users(self):
         """Employees that should be on the clocks: active, with a registration number or badge."""
-        employees = self.env['hr.employee'].sudo().search([('field_role', 'in', (False, 'supervisor', 'worker'))])
+        employees = self.env['hr.employee'].sudo().search([('field_role', 'in', (False, 'supervisor', 'worker', 'staff'))])
         return employees.filtered(lambda e: self._clock_pin(e))
 
     def action_send_employees(self):
@@ -246,7 +246,7 @@ class HrFieldServiceClock(models.AbstractModel):
         project, as the office tablet does. Office staff (without field role) get a plain Odoo attendance.
         Return (log state, detail, attendance)."""
         Attendance = self.env['hr.attendance']
-        field = bool(employee.field_role)
+        field = employee._field_is_crew()
         repeat = timedelta(minutes=REPEAT_MINUTES)
         tz = pytz.timezone(employee._get_tz() or 'UTC')
         day = pytz.utc.localize(when).astimezone(tz).date()
@@ -307,7 +307,7 @@ class HrFieldServiceClock(models.AbstractModel):
             'in_field_clock_id': clock.id,
             'in_mode': 'technical',
         }
-        if employee.field_role:
+        if employee._field_is_crew():
             vals.update(field_supervisor_id=employee._field_leader().id, field_in_kind='clock', field_state='valid')
             if after:
                 # Back from lunch: same project and supervisor as the morning.

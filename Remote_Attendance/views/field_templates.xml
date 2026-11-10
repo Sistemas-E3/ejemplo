@@ -18,7 +18,7 @@
                 <script src="/Remote_Attendance/static/src/js/field_kiosk.js" defer="defer"></script>
             </head>
             <body>
-                <main id="app" t-att-class="'fk fk-office' if role == 'office' else 'fk'" t-att-data-token="token"
+                <main id="app" t-att-class="'fk fk-office' if role in ('office', 'staff') else 'fk'" t-att-data-token="token"
                       t-att-data-supervisor="'1' if is_supervisor else '0'" t-att-data-role="role">
                     <header class="fk-header">
                         <div>

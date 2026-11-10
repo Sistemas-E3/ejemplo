@@ -237,6 +237,7 @@ class TestFieldClockHttp(HttpCase):
         self.assertEqual(response.status_code, 403, "A clock that is not approved keeps its punches")
 
         clock.action_approve()
+        self.env['hr.employee'].search([]).write({'active': False})
         self.env['hr.employee'].create({'name': 'Pedro', 'field_role': 'worker', 'tz': 'America/Mexico_City',
                                         'barcode': '1042'})
         response = self.url_open(url, data=body)

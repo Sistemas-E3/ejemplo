@@ -17,6 +17,8 @@ class TestAttendanceReport(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.Report = cls.env['hr.field.attendance.report']
+        # Only the employees of the test, whatever the database already has.
+        cls.env['hr.employee'].search([]).write({'active': False})
         cls.company_b = cls.env['res.company'].create({'name': 'Empresa B'})
         cls.env.user.company_ids |= cls.company_b
         cls.dept = cls.env['hr.department'].create({'name': 'Obra civil'})
