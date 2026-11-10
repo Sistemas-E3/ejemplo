@@ -66,7 +66,7 @@ class FieldAttendance(http.Controller):
             'role': owner.field_role,
         })
 
-    @http.route('/campo/<string:token>/register', type='json', auth='public')
+    @http.route('/campo/<string:token>/register', type='jsonrpc', auth='public')
     def register_device(self, token, name=None):
         owner = self._owner(token)
         if not owner:
@@ -79,7 +79,7 @@ class FieldAttendance(http.Controller):
         _logger.info("Field attendance: phone %s registered for employee %s (pending)", device.id, owner.id)
         return {'device_key': key, 'device': device.state}
 
-    @http.route('/campo/<string:token>/state', type='json', auth='public', readonly=True)
+    @http.route('/campo/<string:token>/state', type='jsonrpc', auth='public', readonly=True)
     def state(self, token, device_key=None):
         owner = self._owner(token)
         if not owner:
@@ -91,7 +91,7 @@ class FieldAttendance(http.Controller):
             return {'device': device.state, 'owner': owner.name}
         return self._service()._state(owner, device)
 
-    @http.route('/campo/<string:token>/activate', type='json', auth='public')
+    @http.route('/campo/<string:token>/activate', type='jsonrpc', auth='public')
     def activate(self, token, device_key=None, pin=None, project_ids=None):
         owner = self._owner(token)
         device = owner and self._approved_device(owner, device_key)
@@ -99,7 +99,7 @@ class FieldAttendance(http.Controller):
             return {'error': _("Teléfono no autorizado.")}
         return self._safe(self._service()._activate_projects, owner, pin, project_ids or [])
 
-    @http.route('/campo/<string:token>/punch', type='json', auth='public')
+    @http.route('/campo/<string:token>/punch', type='jsonrpc', auth='public')
     def punch(self, token, device_key=None, descriptor=None, employee_id=None, pin=None,
               project_id=None, latitude=None, longitude=None, photo=None, change_project=False,
               kind=None, badge=None, overtime=None):
@@ -115,7 +115,7 @@ class FieldAttendance(http.Controller):
             overtime=None if overtime is None else bool(overtime),
         )
 
-    @http.route('/campo/<string:token>/rostro', type='json', auth='public')
+    @http.route('/campo/<string:token>/rostro', type='jsonrpc', auth='public')
     def enroll_from_link(self, token, device_key=None, pin=None, employee_id=None, descriptors=None,
                          photo=None, consent=False):
         owner = self._owner(token)
@@ -125,7 +125,7 @@ class FieldAttendance(http.Controller):
         return self._safe(self._service()._enroll, owner, device, pin, employee_id, descriptors,
                           photo=photo, consent=bool(consent))
 
-    @http.route('/campo/<string:token>/comida', type='json', auth='public')
+    @http.route('/campo/<string:token>/comida', type='jsonrpc', auth='public')
     def late_lunch(self, token, device_key=None, pin=None, employee_id=None, date=None,
                    lunch_out=None, lunch_in=None, project_id=None):
         owner = self._owner(token)
@@ -135,7 +135,7 @@ class FieldAttendance(http.Controller):
         return self._safe(self._service()._late_lunch, owner, pin, employee_id, self._parse_date(date),
                           lunch_out, lunch_in, project_id)
 
-    @http.route('/campo/<string:token>/lista', type='json', auth='public', readonly=True)
+    @http.route('/campo/<string:token>/lista', type='jsonrpc', auth='public', readonly=True)
     def roll_state(self, token, device_key=None, date=None):
         owner = self._owner(token)
         device = owner and self._find_approved(owner, device_key)
@@ -143,7 +143,7 @@ class FieldAttendance(http.Controller):
             return {'error': _("Teléfono no autorizado.")}
         return self._safe(self._service()._roll_state, owner, self._parse_date(date))
 
-    @http.route('/campo/<string:token>/lista/guardar', type='json', auth='public')
+    @http.route('/campo/<string:token>/lista/guardar', type='jsonrpc', auth='public')
     def roll_save(self, token, device_key=None, pin=None, date=None, project_id=None, entries=None):
         owner = self._owner(token)
         device = owner and self._approved_device(owner, device_key)
@@ -189,7 +189,7 @@ class FieldAttendance(http.Controller):
             'has_consent': bool(employee.field_face_consent_date),
         })
 
-    @http.route('/campo/enrolar/<int:employee_id>/guardar', type='json', auth='user')
+    @http.route('/campo/enrolar/<int:employee_id>/guardar', type='jsonrpc', auth='user')
     def enroll_save(self, employee_id, descriptors=None, photo=None, consent=False):
         employee = self._enroll_employee(employee_id)
         if not consent and not employee.field_face_consent_date:

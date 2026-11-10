@@ -37,7 +37,7 @@ class HrFieldClock(models.Model):
     log_count = fields.Integer("Número de registros", compute='_compute_log_count')
     error_count = fields.Integer("Con error", compute='_compute_log_count')
 
-    _sql_constraints = [('serial_unique', 'unique(serial)', "Ya hay un checador con ese número de serie.")]
+    _serial_unique = models.Constraint('unique(serial)', "Ya hay un checador con ese número de serie.")
 
     def _compute_log_count(self):
         Log = self.env['hr.field.clock.log']

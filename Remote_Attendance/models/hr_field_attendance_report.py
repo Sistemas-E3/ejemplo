@@ -219,7 +219,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
             'codes': CODES,
             'companies': [{'id': c.id, 'name': c.name} for c in self.env.user.company_ids],
             'departments': [{'id': d.id, 'name': d.complete_name} for d in self.env['hr.department'].sudo().search(
-                [('company_id', 'in', self.env.user.company_ids.ids + [False])], order='complete_name')],
+                [('company_id', 'in', self.env.user.company_ids.ids + [False])]).sorted('complete_name')],
             'supervisors': [{'id': e.id, 'name': e.name} for e in self.env['hr.employee'].sudo().search(
                 [('field_role', '=', 'supervisor'), ('company_id', 'in', self.env.user.company_ids.ids)], order='name')],
         }

@@ -151,7 +151,7 @@ class HrFieldAlias(models.Model):
     name = fields.Char("Como lo escriben", required=True, index=True)
     employee_id = fields.Many2one('hr.employee', "Empleado", required=True, ondelete='cascade')
 
-    _sql_constraints = [('name_unique', 'UNIQUE(name)', "Ese nombre ya está asociado a un empleado.")]
+    _name_unique = models.Constraint('UNIQUE(name)', "Ese nombre ya está asociado a un empleado.")
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -173,7 +173,7 @@ class HrFieldProjectAlias(models.Model):
     name = fields.Char("Como lo escriben", required=True, index=True)
     project_id = fields.Many2one('project.project', "Proyecto", required=True, ondelete='cascade')
 
-    _sql_constraints = [('name_unique', 'UNIQUE(name)', "Ese texto ya está asociado a un proyecto.")]
+    _name_unique = models.Constraint('UNIQUE(name)', "Ese texto ya está asociado a un proyecto.")
 
     @api.model_create_multi
     def create(self, vals_list):
