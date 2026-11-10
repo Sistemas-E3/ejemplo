@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="Remote_Attendance.AttendanceReport">
+        <div class="o_field_att_report o_action h-100 overflow-auto">
+            <div class="o_far_header">
+                <div class="o_far_title">
+                    <h2>Reporte de asistencia</h2>
+                    <span class="text-muted">Entradas, salidas, retardos y faltas por día</span>
+                </div>
+                <div class="o_far_kpis" t-if="state.data">
+                    <div class="o_far_kpi"><b t-esc="state.data.kpis.employees"/><span>Empleados</span></div>
+                    <div class="o_far_kpi o_far_A"><b t-esc="state.data.kpis.A"/><span>Asistencias</span></div>
+                    <div class="o_far_kpi o_far_R"><b t-esc="state.data.kpis.R"/><span>Retardos</span></div>
+                    <div class="o_far_kpi o_far_F"><b t-esc="state.data.kpis.F"/><span>Faltas</span></div>
+                    <div class="o_far_kpi o_far_V"><b t-esc="state.data.kpis.V"/><span>Vacaciones</span></div>
+                    <div class="o_far_kpi o_far_P"><b t-esc="state.data.kpis.P"/><span>Permisos</span></div>
+                    <div class="o_far_kpi o_far_I"><b t-esc="state.data.kpis.I"/><span>Incapacidades</span></div>
+                    <div class="o_far_kpi o_far_flag"><b t-esc="state.data.kpis.flags"/><span>Por revisar</span></div>
+                </div>
+            </div>
+
+            <div class="o_far_toolbar">
+                <div class="o_far_dates">
+                    <label>Del <input type="date" class="form-control form-control-sm" t-att-value="state.filters.date_from" t-on-change="(ev) => this.onFilter('date_from', ev)"/></label>
+                    <label>al <input type="date" class="form-control form-control-sm" t-att-value="state.filters.date_to" t-on-change="(ev) => this.onFilter('date_to', ev)"/></label>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-light" t-on-click="() => this.preset('today')">Hoy</button>
+                        <button class="btn btn-light" t-on-click="() => this.preset('yesterday')">Ayer</button>
+                        <button class="btn btn-light" t-on-click="() => this.preset('week')">Semana</button>
+                        <button class="btn btn-light" t-on-click="() => this.preset('month')">Mes</button>
+                        <button class="btn btn-light" t-on-click="() => this.preset('last_month')">Mes pasado</button>
+                        <button class="btn btn-light" t-on-click="() => this.preset('year')">Último año</button>
+                    </div>
+                </div>
+                <div class="o_far_filters" t-if="state.data">
+                    <select class="form-select form-select-sm" t-on-change="(ev) => this.onFilter('company_id', ev)">
+                        <option value="">Todas las empresas</option>
+                        <t t-foreach="state.data.companies" t-as="c" t-key="c.id">
+                            <option t-att-value="c.id" t-att-selected="state.filters.company_id == c.id" t-esc="c.name"/>
+                        </t>
+                    </select>
+                    <select class="form-select form-select-sm" t-on-change="(ev) => this.onFilter('department_id', ev)">
+                        <option value="">Todos los departamentos</option>
+                        <t t-foreach="state.data.departments" t-as="d" t-key="d.id">
+                            <option t-att-value="d.id" t-att-selected="state.filters.department_id == d.id" t-esc="d.name"/>
+                        </t>
+                    </select>
+                    <select class="form-select form-select-sm" t-on-change="(ev) => this.onFilter('scope', ev)">
+                        <option value="">Campo y oficina</option>
+                        <option value="field" t-att-selected="state.filters.scope == 'field'">Solo campo</option>
+                        <option value="office" t-att-selected="state.filters.scope == 'office'">Solo oficina</option>
+                    </select>
+                    <select class="form-select form-select-sm" t-on-change="(ev) => this.onFilter('supervisor_id', ev)">
+                        <option value="">Todos los supervisores</option>
+                        <t t-foreach="state.data.supervisors" t-as="s" t-key="s.id">
+                            <option t-att-value="s.id" t-att-selected="state.filters.supervisor_id == s.id" t-esc="s.name"/>
+                        </t>
+                    </select>
+                    <input type="search" class="form-control form-control-sm o_far_search" placeholder="Buscar nombre, número, puesto… (Enter)"
+                           t-att-value="state.filters.search" t-on-keydown="onSearch"/>
+                    <button class="btn btn-sm btn-success" title="Excel" t-on-click="exportExcel"><i class="fa fa-file-excel-o"/> Excel</button>
+                    <button class="btn btn-sm btn-danger" title="PDF" t-on-click="exportPdf"><i class="fa fa-file-pdf-o"/> PDF</button>
+                </div>
+            </div>
+
+            <div class="o_far_legend" t-if="state.data">
+                <t t-foreach="Object.entries(state.data.codes)" t-as="entry" t-key="entry[0]">
+                    <span t-attf-class="o_far_code o_far_{{entry[0]}}" t-esc="entry[0]"/> <span class="me-3" t-esc="entry[1]"/>
+                </t>
+                <span class="o_far_dot"/> <span>Por revisar</span>
+            </div>
+
+            <div class="alert alert-danger mx-3" t-if="state.error" t-esc="state.error"/>
+            <div class="o_far_loading text-muted" t-if="state.loading">Cargando…</div>
+
+            <div class="o_far_table_wrap" t-if="state.data and !state.error">
+                <table class="o_far_table">
+                    <thead>
+                        <tr>
+                            <th class="o_far_name">Nombre</th>
+                            <t t-foreach="state.data.days" t-as="day" t-key="day.date">
+                                <th t-attf-class="o_far_day {{day.weekend ? 'o_far_weekend' : ''}}">
+                                    <div t-esc="day.weekday"/><div t-esc="day.label"/>
+                                </th>
+                            </t>
+                            <th title="Asistencias">A</th>
+                            <th title="Retardos">R</th>
+                            <th title="Faltas">F</th>
+                            <th title="Vacaciones, permisos e incapacidades">V/P/I</th>
+                            <th title="Horas trabajadas en horario">HT</th>
+                            <th title="Horas extra aprobadas">HE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-if="!state.data.rows.length"><td t-att-colspan="state.data.days.length + 7" class="text-center text-muted p-4">No hay empleados con esos filtros.</td></tr>
+                        <t t-foreach="state.data.rows" t-as="row" t-key="row.id">
+                            <tr>
+                                <td class="o_far_name">
+                                    <div class="o_far_emp" t-esc="row.name"/>
+                                    <small class="text-muted"><t t-esc="row.key"/><t t-if="row.key and row.job"> - </t><t t-esc="row.job"/></small>
+                                </td>
+                                <t t-foreach="row.cells" t-as="cell" t-key="cell_index">
+                                    <td class="o_far_cell" t-att-title="cellTitle(row, cell, state.data.days[cell_index])">
+                                        <span t-if="cell.flag" class="o_far_dot"/>
+                                        <span t-if="cell.code" t-attf-class="o_far_code o_far_{{cell.code}}" t-esc="cell.code"/>
+                                    </td>
+                                </t>
+                                <td class="o_far_num" t-esc="row.totals.A"/>
+                                <td class="o_far_num" t-esc="row.totals.R"/>
+                                <td class="o_far_num" t-esc="row.totals.F"/>
+                                <td class="o_far_num" t-esc="row.totals.V + row.totals.P + row.totals.I"/>
+                                <td class="o_far_num" t-esc="hours(row.totals.hours)"/>
+                                <td class="o_far_num" t-esc="hours(row.totals.overtime)"/>
+                            </tr>
+                        </t>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="o_far_name"><b>Totales</b></td>
+                            <t t-foreach="state.data.day_totals" t-as="dt" t-key="dt_index">
+                                <td class="o_far_cell">
+                                    <span class="o_far_mini o_far_A" t-esc="dt.present"/>
+                                    <span class="o_far_mini o_far_F" t-esc="dt.absent"/>
+                                </td>
+                            </t>
+                            <td class="o_far_num"><b t-esc="state.data.totals.A"/></td>
+                            <td class="o_far_num"><b t-esc="state.data.totals.R"/></td>
+                            <td class="o_far_num"><b t-esc="state.data.totals.F"/></td>
+                            <td class="o_far_num"><b t-esc="state.data.totals.V + state.data.totals.P + state.data.totals.I"/></td>
+                            <td class="o_far_num"><b t-esc="hours(state.data.totals.hours)"/></td>
+                            <td class="o_far_num"><b t-esc="hours(state.data.totals.overtime)"/></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="o_far_pager" t-if="state.data and state.data.count > 0">
+                <button class="btn btn-light btn-sm" t-att-disabled="state.page == 0" t-on-click="() => this.goPage(0)">«</button>
+                <button class="btn btn-light btn-sm" t-att-disabled="state.page == 0" t-on-click="() => this.goPage(state.page - 1)">‹</button>
+                <span>Página <b t-esc="state.page + 1"/> de <t t-esc="pageCount"/> · <t t-esc="state.data.count"/> empleados</span>
+                <button class="btn btn-light btn-sm" t-att-disabled="state.page + 1 >= pageCount" t-on-click="() => this.goPage(state.page + 1)">›</button>
+                <button class="btn btn-light btn-sm" t-att-disabled="state.page + 1 >= pageCount" t-on-click="() => this.goPage(pageCount - 1)">»</button>
+            </div>
+        </div>
+    </t>
+</templates>

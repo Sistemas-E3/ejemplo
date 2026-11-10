@@ -209,3 +209,18 @@ class FieldAttendance(http.Controller):
             } for index, descriptor in enumerate(descriptors)])
             return {'count': len(employee.field_face_ids)}
         return self._safe(_save)
+
+
+class FieldAttendanceReportController(http.Controller):
+
+    @http.route('/campo/reporte-asistencia/excel', type='http', auth='user', methods=['POST'])
+    def attendance_report_excel(self, filters='{}', **kwargs):
+        try:
+            values = json.loads(filters)
+        except ValueError:
+            values = {}
+        content, name = request.env['hr.field.attendance.report'].excel_file(values)
+        return request.make_response(content, headers=[
+            ('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            ('Content-Disposition', http.content_disposition(name)),
+        ])

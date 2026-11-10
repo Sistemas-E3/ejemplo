@@ -11,3 +11,4 @@ from . import project_project
 from . import hr_field_day
 from . import hr_field_clock
 from . import hr_field_clock_import
+from . import hr_field_attendance_report

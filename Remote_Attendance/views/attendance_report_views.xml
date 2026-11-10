@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_attendance_report" model="report.paperformat">
+        <field name="name">Reporte de asistencia (horizontal)</field>
+        <field name="format">Letter</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">6</field>
+        <field name="margin_right">6</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">5</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_attendance_report_pdf" model="ir.actions.report">
+        <field name="name">Reporte de asistencia</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">Remote_Attendance.attendance_report_pdf</field>
+        <field name="report_file">Remote_Attendance.attendance_report_pdf</field>
+        <field name="print_report_name">'Reporte de asistencia'</field>
+        <field name="paperformat_id" ref="paperformat_attendance_report"/>
+    </record>
+
+    <template id="attendance_report_pdf">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+                <style>
+                    .far { font-family: Arial, sans-serif; font-size: 8px; }
+                    .far h3 { font-size: 13px; margin: 0 0 2px; }
+                    .far table { width: 100%; border-collapse: collapse; }
+                    .far th, .far td { border: 1px solid #ccc; padding: 2px; text-align: center; }
+                    .far th { background: #eef2f6; }
+                    .far td.n { text-align: left; white-space: nowrap; }
+                    .far .A { background: #e5f4e4; } .far .R { background: #f9eeda; } .far .F { background: #fbebeb; }
+                    .far .V { background: #e7f1fb; } .far .P { background: #efedff; } .far .I { background: #f9ece7; }
+                    .far .we { background: #f2f2f2; }
+                    .far tr { page-break-inside: avoid; }
+                    .far thead { display: table-header-group; }
+                </style>
+                <div class="far">
+                    <h3>Reporte de asistencia del <t t-esc="date_from"/> al <t t-esc="date_to"/></h3>
+                    <div>
+                        Empleados: <b t-esc="kpis['employees']"/> ·
+                        Asistencias: <b t-esc="kpis['A']"/> · Retardos: <b t-esc="kpis['R']"/> · Faltas: <b t-esc="kpis['F']"/> ·
+                        Vacaciones: <b t-esc="kpis['V']"/> · Permisos: <b t-esc="kpis['P']"/> · Incapacidades: <b t-esc="kpis['I']"/>
+                    </div>
+                    <div style="margin-bottom: 4px;">
+                        <t t-foreach="codes.items()" t-as="code"><b t-esc="code[0]"/> = <t t-esc="code[1]"/>   </t>
+                        <t t-if="not detailed"> · Periodo mayor a un mes: se imprimen solo los totales (el detalle por día está en el Excel).</t>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Nombre</th>
+                                <t t-foreach="days" t-as="day"><th t-att-class="day['weekend'] and 'we' or ''"><t t-esc="day['weekday']"/><br/><t t-esc="day['label']"/></th></t>
+                                <th>A</th><th>R</th><th>F</th><th>V</th><th>P</th><th>I</th><th>HT</th><th>HE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="rows" t-as="row">
+                                <tr>
+                                    <td t-esc="row['key']"/>
+                                    <td class="n"><t t-esc="row['name']"/><t t-if="row['job']"> · <t t-esc="row['job']"/></t></td>
+                                    <t t-if="detailed">
+                                        <t t-foreach="row['cells']" t-as="cell"><td t-att-class="cell['code']" t-esc="cell['code']"/></t>
+                                    </t>
+                                    <td t-esc="row['totals']['A']"/><td t-esc="row['totals']['R']"/><td t-esc="row['totals']['F']"/>
+                                    <td t-esc="row['totals']['V']"/><td t-esc="row['totals']['P']"/><td t-esc="row['totals']['I']"/>
+                                    <td t-esc="hours_text(row['totals']['hours'])"/><td t-esc="hours_text(row['totals']['overtime'])"/>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_field_attendance_report" model="ir.actions.client">
+        <field name="name">Reporte de asistencia</field>
+        <field name="tag">remote_attendance_report</field>
+    </record>
+
+    <menuitem id="menu_field_attendance_report" name="Reporte de asistencia" parent="hr_attendance.menu_hr_attendance_root"
+              sequence="7" action="action_field_attendance_report"
+              groups="Remote_Attendance.group_field_operations,hr_attendance.group_hr_attendance_officer"/>
+</odoo>

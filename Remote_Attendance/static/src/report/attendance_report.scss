@@ -1,0 +1,94 @@
+.o_field_att_report {
+    background: $o-webclient-background-color;
+    padding-bottom: 16px;
+
+    .o_far_header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 16px 8px;
+        h2 { margin: 0; font-size: 1.3rem; }
+    }
+    .o_far_kpis { display: flex; flex-wrap: wrap; gap: 8px; }
+    .o_far_kpi {
+        background: $o-view-background-color;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        padding: 6px 12px;
+        min-width: 92px;
+        display: flex;
+        flex-direction: column;
+        b { font-size: 1.15rem; }
+        span { font-size: .75rem; color: $text-muted; }
+        &.o_far_A b { color: #2e7d32; }
+        &.o_far_R b { color: #b26a00; }
+        &.o_far_F b { color: #c62828; }
+        &.o_far_V b { color: #1565c0; }
+        &.o_far_P b { color: #6a4fbf; }
+        &.o_far_I b { color: #ad1457; }
+        &.o_far_flag b { color: #ef6c00; }
+    }
+    .o_far_toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        justify-content: space-between;
+        padding: 8px 16px;
+    }
+    .o_far_dates, .o_far_filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .o_far_dates label { display: flex; gap: 4px; align-items: center; margin: 0; }
+    .o_far_filters select { width: auto; max-width: 220px; }
+    .o_far_search { width: 260px; }
+    .o_far_legend { padding: 4px 16px 8px; font-size: .8rem; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
+    .o_far_loading { padding: 8px 16px; }
+
+    .o_far_table_wrap {
+        margin: 0 16px;
+        overflow: auto;
+        max-height: calc(100vh - 330px);
+        background: $o-view-background-color;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+    }
+    .o_far_table {
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: .8rem;
+        th, td { border-bottom: 1px solid $border-color; padding: 4px 6px; white-space: nowrap; }
+        thead th {
+            position: sticky; top: 0; z-index: 2;
+            background: #f4f6f9; color: $text-muted; font-weight: 600; text-align: center; font-size: .72rem;
+        }
+        tfoot td { position: sticky; bottom: 0; background: #f4f6f9; z-index: 2; }
+        .o_far_name {
+            position: sticky; left: 0; z-index: 1;
+            background: $o-view-background-color;
+            min-width: 240px; max-width: 280px;
+            border-right: 1px solid $border-color;
+            text-align: left;
+        }
+        thead .o_far_name, tfoot .o_far_name { z-index: 3; background: #f4f6f9; }
+        .o_far_emp { font-weight: 600; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+        .o_far_day { min-width: 46px; }
+        .o_far_weekend { background: #eceff3; }
+        .o_far_cell { text-align: center; position: relative; }
+        .o_far_num { text-align: center; min-width: 46px; }
+    }
+    .o_far_code {
+        display: inline-block; min-width: 24px; padding: 1px 4px; border-radius: 4px; font-weight: 600; text-align: center;
+    }
+    .o_far_A { background: #e5f4e4; color: #2e7d32; }
+    .o_far_R { background: #f9eeda; color: #b26a00; }
+    .o_far_F { background: #fbebeb; color: #c62828; }
+    .o_far_V { background: #e7f1fb; color: #1565c0; }
+    .o_far_P { background: #efedff; color: #6a4fbf; }
+    .o_far_I { background: #f9ece7; color: #ad1457; }
+    .o_far_mini { display: inline-block; min-width: 20px; padding: 0 3px; border-radius: 3px; font-size: .7rem; }
+    .o_far_dot {
+        display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ef6c00;
+        vertical-align: top; margin-right: 1px;
+    }
+    .o_far_pager { display: flex; gap: 6px; justify-content: center; align-items: center; padding: 12px; }
+}
