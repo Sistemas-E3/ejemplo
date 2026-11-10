@@ -248,7 +248,7 @@ class HrFieldServiceClock(models.AbstractModel):
         Attendance = self.env['hr.attendance']
         field = employee._field_is_crew()
         repeat = timedelta(minutes=REPEAT_MINUTES)
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         day = pytz.utc.localize(when).astimezone(tz).date()
 
         # Forgot to punch out on a previous day: closed without hours for HR to fix.

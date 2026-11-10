@@ -69,7 +69,7 @@ class HrFieldManualLoad(models.TransientModel):
         }
 
     def _to_utc(self, employee, hour):
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         local = tz.localize(datetime.combine(self.date, float_to_time(hour)))
         return local.astimezone(pytz.utc).replace(tzinfo=None)
 

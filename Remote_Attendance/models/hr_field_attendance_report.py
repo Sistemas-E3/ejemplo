@@ -101,7 +101,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
         for leave in leaves:
             name = plain(leave.holiday_status_id.name)
             code = 'V' if 'vacac' in name else 'I' if 'incap' in name else 'P'
-            tz = pytz.timezone(leave.employee_id._get_tz() or 'UTC')
+            tz = pytz.timezone(leave.employee_id._field_tz() or 'UTC')
             first = pytz.utc.localize(leave.date_from).astimezone(tz).date()
             last = pytz.utc.localize(leave.date_to).astimezone(tz).date()
             day = max(first, days[0])
@@ -135,7 +135,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
         rows = []
         kpis = dict.fromkeys(('A', 'R', 'F', 'V', 'P', 'I', 'flags'), 0)
         for employee in employees:
-            tz = pytz.timezone(employee._get_tz() or 'UTC')
+            tz = pytz.timezone(employee._field_tz() or 'UTC')
             workdays = self._workdays(employee)
             crew = employee.field_role in ('supervisor', 'worker')
             # No absences before the person joined.

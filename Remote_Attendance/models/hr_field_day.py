@@ -24,7 +24,7 @@ class HrFieldService(models.AbstractModel):
     @api.model
     def _employee_day(self, employee, day):
         """Return (work intervals as naive UTC pairs, hours of a full day, regular working day)."""
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         start = tz.localize(datetime.combine(day, time.min))
         end = tz.localize(datetime.combine(day, time.max))
         calendar = employee.resource_calendar_id
@@ -248,7 +248,7 @@ class HrFieldService(models.AbstractModel):
             local = time(hour, minute)
         except (TypeError, ValueError):
             raise UserError(_("Hora inválida: %s", value))
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         return tz.localize(datetime.combine(day, local)).astimezone(pytz.utc).replace(tzinfo=None)
 
     @api.model

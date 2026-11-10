@@ -154,7 +154,7 @@ class HrFieldService(models.AbstractModel):
 
     @api.model
     def _local_time(self, employee, value):
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         return pytz.utc.localize(value).astimezone(tz).strftime('%H:%M')
 
     @api.model

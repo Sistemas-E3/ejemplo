@@ -85,12 +85,12 @@ class TestFieldMarks(TransactionCase):
         attendance.check_in = attendance.check_in - timedelta(hours=hours)
 
     def _local(self, employee, day, hour):
-        tz = pytz.timezone(employee._get_tz() or 'UTC')
+        tz = pytz.timezone(employee._field_tz() or 'UTC')
         return tz.localize(datetime.combine(day, time(hour))).astimezone(pytz.utc).replace(tzinfo=None)
 
     def _at(self, hour, minute=0):
         """Freeze the clock at ``hour`` local time of the test day."""
-        tz = pytz.timezone(self.worker._get_tz() or 'UTC')
+        tz = pytz.timezone(self.worker._field_tz() or 'UTC')
         local = tz.localize(datetime.combine(DAY, time(hour, minute)))
         return freeze_time(local.astimezone(pytz.utc).replace(tzinfo=None))
 

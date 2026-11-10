@@ -83,7 +83,7 @@ class HrAttendance(models.Model):
             if not attendance.check_in:
                 attendance.field_date = False
                 continue
-            tz = pytz.timezone(attendance.employee_id._get_tz() or 'UTC')
+            tz = pytz.timezone(attendance.employee_id._field_tz() or 'UTC')
             attendance.field_date = pytz.utc.localize(attendance.check_in).astimezone(tz).date()
 
     @api.model
@@ -101,7 +101,7 @@ class HrAttendance(models.Model):
         """Start and end of the working day of the check-in, as naive UTC datetimes."""
         self.ensure_one()
         schedule = schedule or self._field_schedule()
-        tz = pytz.timezone(self.employee_id._get_tz() or 'UTC')
+        tz = pytz.timezone(self.employee_id._field_tz() or 'UTC')
         day = pytz.utc.localize(self.check_in).astimezone(tz).date()
 
         def to_utc(hour):

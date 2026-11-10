@@ -113,7 +113,7 @@ class HrEmployee(models.Model):
 
     def _field_today(self):
         self.ensure_one()
-        return datetime.now(pytz.timezone(self._get_tz() or 'UTC')).date()
+        return datetime.now(pytz.timezone(self._field_tz() or 'UTC')).date()
 
     def _field_leader(self):
         """The supervisor whose active projects apply to this employee."""
@@ -132,6 +132,11 @@ class HrEmployee(models.Model):
     def _field_staff(self):
         """Everybody who marks attendance in the field (supervisors and workers)."""
         return self.search([('field_role', 'in', ('supervisor', 'worker'))])
+
+    def _field_tz(self):
+        """Timezone of the employee's own clock: theirs first, then their schedule's (Odoo 19 reversed it)."""
+        self.ensure_one()
+        return self.tz or self.resource_calendar_id.tz or self.company_id.resource_calendar_id.tz or 'UTC'
 
     @api.model
     def _field_people(self):
