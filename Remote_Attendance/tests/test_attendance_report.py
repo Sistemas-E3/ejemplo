@@ -82,4 +82,5 @@ class TestAttendanceReport(TransactionCase):
         html, _type = self.env['ir.actions.report']._render_qweb_html(
             'Remote_Attendance.attendance_report_pdf', [], data={'filters': dict(self.filters, search='Ana')})
         self.assertIn(b'Ana Puntual', html)
+        self.assertIn(b'Obra civil', html, "Department under the name")
         self.assertIn(b'Reporte de asistencia del 28/09/2026', html)

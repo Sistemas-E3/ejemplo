@@ -98,6 +98,7 @@
                                 <td class="o_far_name">
                                     <div class="o_far_emp" t-esc="row.name"/>
                                     <small class="text-muted"><t t-esc="row.key"/><t t-if="row.key and row.job"> - </t><t t-esc="row.job"/></small>
+                                    <small t-if="row.department or row.company" class="d-block text-muted"><t t-esc="row.department"/><t t-if="row.department and row.company"> · </t><t t-esc="row.company"/></small>
                                 </td>
                                 <t t-foreach="row.cells" t-as="cell" t-key="cell_index">
                                     <td class="o_far_cell" t-att-title="cellTitle(row, cell, state.data.days[cell_index])">
