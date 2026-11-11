@@ -33,6 +33,7 @@
                     .far th, .far td { border: 1px solid #ccc; padding: 2px; text-align: center; }
                     .far th { background: #eef2f6; }
                     .far td.n { text-align: left; white-space: nowrap; }
+                    .far td.n .d { font-size: 7px; color: #777; }
                     .far .A { background: #e5f4e4; } .far .R { background: #f9eeda; } .far .F { background: #fbebeb; }
                     .far .V { background: #e7f1fb; } .far .P { background: #efedff; } .far .I { background: #f9ece7; }
                     .far .we { background: #f2f2f2; }
@@ -63,7 +64,7 @@
                             <t t-foreach="rows" t-as="row">
                                 <tr>
                                     <td t-esc="row['key']"/>
-                                    <td class="n"><t t-esc="row['name']"/><t t-if="row['job']"> · <t t-esc="row['job']"/></t></td>
+                                    <td class="n"><t t-esc="row['name']"/><t t-if="row['job']"> · <t t-esc="row['job']"/></t><div t-if="row['department'] or row['company']" class="d"><t t-esc="row['department']"/><t t-if="row['department'] and row['company']"> · </t><t t-esc="row['company']"/></div></td>
                                     <t t-if="detailed">
                                         <t t-foreach="row['cells']" t-as="cell"><td t-att-class="cell['code']" t-esc="cell['code']"/></t>
                                     </t>
