@@ -5,3 +5,4 @@ from . import test_field_marks
 from . import test_field_manual
 from . import test_field_clock
 from . import test_attendance_report
+from . import test_field_offline

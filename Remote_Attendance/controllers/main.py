@@ -151,6 +151,51 @@ class FieldAttendance(http.Controller):
             return {'error': _("Teléfono no autorizado.")}
         return self._safe(self._service()._roll_save, owner, pin, self._parse_date(date), project_id, entries)
 
+    @http.route('/campo/<string:token>/sincronizar', type='jsonrpc', auth='public')
+    def sync(self, token, device_key=None, punches=None, phone_now=None):
+        """Punches taken without signal, sent when the phone is back online."""
+        owner = self._owner(token)
+        device = owner and self._approved_device(owner, device_key)
+        if not device:
+            return {'error': _("Teléfono no autorizado.")}
+        return self._safe(self._service()._sync, owner, device, punches if isinstance(punches, list) else [],
+                          phone_now=phone_now)
+
+    # ------------------------------------------------------------------
+    # Installable app and offline (service worker)
+    # ------------------------------------------------------------------
+
+    @http.route('/campo/<string:token>/app.webmanifest', type='http', auth='public', sitemap=False)
+    def web_manifest(self, token):
+        owner = self._owner(token)
+        if not owner:
+            raise request.not_found()
+        start = '/campo/' + token
+        manifest = {
+            'name': _("Asistencia · %s", owner.name),
+            'short_name': _("Asistencia"),
+            'start_url': start,
+            'scope': start,
+            'display': 'standalone',
+            'orientation': 'any',
+            'background_color': '#111827',
+            'theme_color': '#1f2937',
+            'icons': [{'src': '/Remote_Attendance/static/src/img/icon-192.png', 'sizes': '192x192', 'type': 'image/png'},
+                      {'src': '/Remote_Attendance/static/src/img/icon-512.png', 'sizes': '512x512', 'type': 'image/png'}],
+        }
+        return request.make_response(json.dumps(manifest), headers=[
+            ('Content-Type', 'application/manifest+json'), ('Cache-Control', 'no-cache')])
+
+    @http.route('/campo/sw.js', type='http', auth='public', sitemap=False, save_session=False)
+    def service_worker(self):
+        """Served under /campo/ so it can keep the kiosk pages working without signal."""
+        from odoo.tools import file_open
+        with file_open('Remote_Attendance/static/src/js/field_sw.js', 'rb') as f:
+            content = f.read()
+        return request.make_response(content, headers=[
+            ('Content-Type', 'text/javascript'), ('Cache-Control', 'no-cache'),
+            ('Service-Worker-Allowed', '/campo/')])
+
     # ------------------------------------------------------------------
     # Face enrolment (Operaciones, logged in)
     # ------------------------------------------------------------------

@@ -7,13 +7,34 @@
     let toastTimer = null;
 
     async function rpc(url, params) {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ jsonrpc: "2.0", method: "call", id: Date.now(), params: params || {} }),
-        });
-        const payload = await response.json();
+        // A weak signal can leave the request hanging: after 20 seconds it counts as no signal.
+        const controller = window.AbortController ? new AbortController() : null;
+        const timer = controller && setTimeout(() => controller.abort(), 20000);
+        let response;
+        try {
+            response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call", id: Date.now(), params: params || {} }),
+                signal: controller ? controller.signal : undefined,
+            });
+        } catch (cause) {
+            const error = new Error("Sin conexión con el servidor");
+            error.offline = true;
+            error.cause = cause;
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            const error = new Error("Sin conexión con el servidor");
+            error.offline = true;
+            throw error;
+        }
         if (payload.error) {
             const data = payload.error.data || {};
             throw new Error(data.message || payload.error.message || "Error del servidor");

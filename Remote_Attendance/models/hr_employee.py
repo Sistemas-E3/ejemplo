@@ -113,7 +113,8 @@ class HrEmployee(models.Model):
 
     def _field_today(self):
         self.ensure_one()
-        return datetime.now(pytz.timezone(self._field_tz() or 'UTC')).date()
+        now = self.env.context.get('field_now') or fields.Datetime.now()
+        return pytz.utc.localize(now).astimezone(pytz.timezone(self._field_tz() or 'UTC')).date()
 
     def _field_leader(self):
         """The supervisor whose active projects apply to this employee."""

@@ -23,6 +23,11 @@
     let position = null;
     let busy = false;
     let pending = null; // last punch request, reused when the server asks for a project or a PIN
+    const Offline = window.FieldOffline;
+    const stateKey = "field_attendance_state_" + token;
+    let offline = false; // working from the saved state, without signal
+    let syncing = false;
+    let recentQueued = []; // office tablet without signal: faces saved in the last minutes
 
     function readKey() {
         try {
@@ -80,9 +85,38 @@
         $("btn-lunch").hidden = state.role !== "supervisor" || !state.manual;
     }
 
+    function saveState(value) {
+        try {
+            window.localStorage.setItem(stateKey, JSON.stringify(value));
+        } catch {
+            // without storage it simply needs signal to open
+        }
+    }
+
+    function savedState() {
+        try {
+            return JSON.parse(window.localStorage.getItem(stateKey) || "null");
+        } catch {
+            return null;
+        }
+    }
+
     async function refresh() {
         deviceKey = readKey();
-        const result = await rpc(base + "/state", { device_key: deviceKey });
+        let result;
+        try {
+            result = await rpc(base + "/state", { device_key: deviceKey });
+            offline = false;
+        } catch (error) {
+            const saved = deviceKey && Offline.isNetworkError(error) ? savedState() : null;
+            if (!saved) {
+                throw error;
+            }
+            // No signal: keep marking with what the phone knew the last time it had signal.
+            offline = true;
+            result = saved;
+        }
+        updateOfflineStatus();
         if (result.error) {
             $("active-projects").textContent = result.error;
             return;
@@ -103,6 +137,10 @@
             return;
         }
         state = result;
+        if (!offline) {
+            saveState(result);
+            syncNow();
+        }
         if (state.role === "supervisor") {
             $("btn-lunch").hidden = !state.manual;
             setMode(state.manual ? mode : "camera");
@@ -421,10 +459,73 @@
         return meters < 1000 ? Math.round(meters) + " m" : (meters / 1000).toFixed(1) + " km";
     }
 
+    function needsProjectOffline(params) {
+        if (isOffice || params.project_id) {
+            return false;
+        }
+        const projects = (state && state.active_projects) || [];
+        return projects.length > 1 && (params.change_project || ["in", "lunch_in"].includes(params.kind));
+    }
+
+    function faceDistance(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) {
+            sum += (a[i] - b[i]) ** 2;
+        }
+        return Math.sqrt(sum);
+    }
+
+    /** No signal: keep the punch on the phone. Return true when it was saved. */
+    async function queue(params) {
+        if (!params.descriptor && !params.badge) {
+            toast("Sin señal: marcar con PIN necesita internet. Usa la cámara.", "error", 6000);
+            return false;
+        }
+        if (needsProjectOffline(params)) {
+            chooseProject();
+            return false;
+        }
+        if (isOffice && params.descriptor) {
+            // The tablet sees the same face several times in a row: save it once.
+            const now = Date.now();
+            recentQueued = recentQueued.filter((item) => now - item.at < 120000);
+            if (recentQueued.some((item) => faceDistance(item.descriptor, params.descriptor) < 0.45)) {
+                showOfficeResult({ queued: true, repeat: true });
+                return true;
+            }
+            recentQueued.push({ descriptor: params.descriptor, at: now });
+        }
+        await Offline.add(token, params);
+        offline = true;
+        await updateOfflineStatus();
+        if (isOffice) {
+            showOfficeResult({ queued: true });
+        } else {
+            toast("Sin señal: el marcaje quedó guardado en el teléfono y se enviará solo cuando vuelva la señal.",
+                "warning", 7000);
+        }
+        return true;
+    }
+
     async function send(extra) {
         const params = Object.assign({}, pending, extra || {});
         pending = params;
-        const result = await rpc(base + "/punch", params);
+        let result;
+        try {
+            result = await rpc(base + "/punch", params);
+        } catch (error) {
+            if (!Offline.isNetworkError(error)) {
+                throw error;
+            }
+            if (await queue(params)) {
+                pending = null;
+            }
+            return;
+        }
+        if (offline) {
+            offline = false;
+            syncNow();
+        }
         if (result.need_project) {
             chooseProject();
             return;
@@ -515,7 +616,11 @@
         box.replaceChildren();
         const title = document.createElement("div");
         const detail = document.createElement("small");
-        if (result.error) {
+        if (result.queued) {
+            box.className = "fk-office-result warn";
+            title.textContent = result.repeat ? "Ya quedó guardado" : "Guardado sin señal";
+            detail.textContent = "Se registra cuando vuelva el internet";
+        } else if (result.error) {
             box.className = "fk-office-result bad";
             title.textContent = result.error;
             detail.textContent = result.need_pin ? "Acércate a la cámara o usa «Marcar con PIN»" : "";
@@ -921,6 +1026,103 @@
         button.addEventListener("click", () => {
             closePanel(button.dataset.close);
             pending = null;
+        });
+    }
+
+    // ------------------------------------------------------------------
+    // Sin señal: enviar lo guardado cuando vuelve el internet
+    // ------------------------------------------------------------------
+
+    async function updateOfflineStatus() {
+        let count = 0;
+        try {
+            count = (await Offline.list(token)).length;
+        } catch {
+            count = 0;
+        }
+        const box = $("offline-status");
+        box.classList.toggle("fk-offline-sending", syncing);
+        if (syncing) {
+            box.textContent = "Enviando " + count + " marcajes guardados…";
+        } else if (offline) {
+            box.textContent = "Sin señal" + (count ? " · " + count + " marcajes guardados en el teléfono" : ": los marcajes se guardan en el teléfono");
+        } else {
+            box.textContent = count ? count + " marcajes por enviar" : "";
+        }
+        box.hidden = !box.textContent;
+    }
+
+    async function syncNow() {
+        if (syncing || !deviceKey) {
+            return;
+        }
+        let queued;
+        try {
+            queued = await Offline.list(token);
+        } catch {
+            return;
+        }
+        if (!queued.length) {
+            await updateOfflineStatus();
+            return;
+        }
+        syncing = true;
+        await updateOfflineStatus();
+        let done = 0;
+        const errors = [];
+        try {
+            for (let i = 0; i < queued.length; i += 10) {
+                const batch = queued.slice(i, i + 10).map((punch) => {
+                    const copy = Object.assign({}, punch);
+                    delete copy.token;
+                    return copy;
+                });
+                const result = await rpc(base + "/sincronizar", {
+                    device_key: deviceKey, punches: batch, phone_now: new Date().toISOString(),
+                });
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                await Offline.remove(result.results.map((r) => r.uuid));
+                for (const r of result.results) {
+                    if (r.state === "error") {
+                        errors.push((r.employee ? r.employee + ": " : "") + r.detail);
+                    } else {
+                        done += 1;
+                    }
+                }
+            }
+            offline = false;
+        } catch (error) {
+            if (!Offline.isNetworkError(error)) {
+                toast("No se pudieron enviar los marcajes guardados: " + error.message, "error", 8000);
+            }
+        } finally {
+            syncing = false;
+            await updateOfflineStatus();
+        }
+        if (errors.length) {
+            toast("Marcajes guardados sin señal: " + done + " registrados, " + errors.length
+                + " no se registraron (" + errors.slice(0, 3).join("; ") + "). Revísalos con Operaciones.", "error", 12000);
+        } else if (done) {
+            toast(done + " marcajes guardados sin señal ya quedaron registrados.", "success", 6000);
+        }
+    }
+
+    window.addEventListener("online", () => syncNow());
+    window.addEventListener("offline", () => {
+        offline = true;
+        updateOfflineStatus();
+    });
+    setInterval(() => {
+        if (navigator.onLine) {
+            syncNow();
+        }
+    }, 60000);
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/campo/sw.js", { scope: "/campo/" }).catch(() => {
+            // Without it the link still works, only not without signal.
         });
     }
 

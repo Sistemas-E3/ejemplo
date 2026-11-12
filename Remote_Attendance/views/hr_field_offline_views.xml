@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_field_offline_punch_list" model="ir.ui.view">
+        <field name="name">hr.field.offline.punch.list</field>
+        <field name="model">hr.field.offline.punch</field>
+        <field name="arch" type="xml">
+            <list string="Marcajes sin señal" create="false" edit="false" delete="false"
+                  decoration-danger="state == 'error'">
+                <field name="punch_time"/>
+                <field name="received_at"/>
+                <field name="owner_id"/>
+                <field name="device_id" optional="hide"/>
+                <field name="employee_id"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'" decoration-danger="state == 'error'"/>
+                <field name="detail"/>
+                <field name="attendance_id" optional="hide"/>
+                <field name="phone_time" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_field_offline_punch_search" model="ir.ui.view">
+        <field name="name">hr.field.offline.punch.search</field>
+        <field name="model">hr.field.offline.punch</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="owner_id"/>
+                <filter name="error" string="No se registraron" domain="[('state', '=', 'error')]"/>
+                <separator/>
+                <filter name="group_owner" string="Enlace" context="{'group_by': 'owner_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="hr_field_offline_punch_action" model="ir.actions.act_window">
+        <field name="name">Marcajes sin señal</field>
+        <field name="res_model">hr.field.offline.punch</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay marcajes hechos sin señal</p>
+            <p>Cuando un teléfono marca sin internet, guarda el marcaje y lo envía al volver la señal.
+               Aquí se ve cada uno y si se registró o por qué no.</p>
+        </field>
+    </record>
+</odoo>

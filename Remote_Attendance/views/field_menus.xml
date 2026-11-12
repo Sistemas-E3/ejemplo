@@ -19,7 +19,9 @@
               action="Remote_Attendance_overtime_action" groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="menu_field_clock_logs" name="Registros del checador" parent="menu_field_marks" sequence="6"
               action="hr_field_clock_log_action" groups="Remote_Attendance.group_field_operations"/>
-    <menuitem id="menu_field_timesheet_list" name="Listas de horas (Excel)" parent="menu_field_marks" sequence="7"
+    <menuitem id="menu_field_offline" name="Marcajes sin señal" parent="menu_field_marks" sequence="7"
+              action="hr_field_offline_punch_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_timesheet_list" name="Listas de horas (Excel)" parent="menu_field_marks" sequence="8"
               action="hr_field_timesheet_list_action" groups="Remote_Attendance.group_field_operations"/>
 
     <menuitem id="menu_field_load" name="Cargar" parent="hr_attendance.menu_hr_attendance_root" sequence="3"
