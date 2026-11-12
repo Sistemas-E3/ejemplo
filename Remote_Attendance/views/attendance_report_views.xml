@@ -86,6 +86,6 @@
     </record>
 
     <menuitem id="menu_field_attendance_report" name="Reporte de asistencia" parent="hr_attendance.menu_hr_attendance_root"
-              sequence="7" action="action_field_attendance_report"
+              sequence="1" action="action_field_attendance_report"
               groups="Remote_Attendance.group_field_operations,hr_attendance.group_hr_attendance_officer"/>
 </odoo>
