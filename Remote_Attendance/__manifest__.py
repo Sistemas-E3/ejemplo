@@ -1,6 +1,6 @@
 {
     'name': 'Asistencias en campo',
-    'version': '18.0.1.10.0',
+    'version': '18.0.1.11.0',
     'category': 'Human Resources/Attendances',
     'summary': 'Marcaje con reconocimiento facial y GPS desde el teléfono, ligado al proyecto y a sus horas',
     'description': """
@@ -31,6 +31,7 @@ Asistencias en campo
         'views/hr_field_manual_views.xml',
         'views/hr_field_timesheet_list_views.xml',
         'views/hr_field_clock_views.xml',
+        'views/hr_field_offline_views.xml',
         'views/field_menus.xml',
         'views/attendance_report_views.xml',
         'data/field_cron.xml',

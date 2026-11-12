@@ -138,3 +138,15 @@ body {
         --fk-border: #374151;
     }
 }
+
+/* Sin señal: aviso de marcajes guardados en el teléfono */
+.fk-offline {
+    margin-top: 4px;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: #fef3c7;
+    color: #92400e;
+}
+.fk-offline.fk-offline-sending { background: #dbeafe; color: #1e40af; }

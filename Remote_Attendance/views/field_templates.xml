@@ -15,6 +15,10 @@
             <head>
                 <title>Marcaje en campo</title>
                 <t t-call="Remote_Attendance.field_page_head"/>
+                <link rel="manifest" t-attf-href="/campo/#{token}/app.webmanifest"/>
+                <link rel="apple-touch-icon" href="/Remote_Attendance/static/src/img/icon-192.png"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <script src="/Remote_Attendance/static/src/js/field_offline.js" defer="defer"></script>
                 <script src="/Remote_Attendance/static/src/js/field_kiosk.js" defer="defer"></script>
             </head>
             <body>
@@ -24,6 +28,7 @@
                         <div>
                             <div class="fk-owner" t-esc="owner_name"/>
                             <div class="fk-projects" id="active-projects">Cargando…</div>
+                            <div class="fk-offline" id="offline-status" hidden="hidden"/>
                         </div>
                         <div class="fk-header-actions">
                             <button type="button" class="fk-btn fk-btn-light" id="btn-mode" hidden="hidden">Cámara</button>

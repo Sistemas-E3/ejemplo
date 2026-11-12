@@ -49,6 +49,11 @@ class HrFieldService(models.AbstractModel):
     _description = "Servicio de asistencias en campo"
 
     @api.model
+    def _now(self):
+        """Now, or the moment an offline punch was taken (synced later from the phone)."""
+        return self.env.context.get('field_now') or fields.Datetime.now()
+
+    @api.model
     def _face_threshold(self):
         value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.face_threshold')
         try:
@@ -172,6 +177,9 @@ class HrFieldService(models.AbstractModel):
     def _pick_project(self, leader, project_id):
         """Return (project, error dict) among the leader's active projects."""
         projects = leader._field_active_projects() if leader else self.env['project.project']
+        if self.env.context.get('field_offline') and project_id and leader:
+            # Marked without signal: the phone used the projects active when it last had signal.
+            projects |= leader.field_project_ids
         if not projects:
             return projects, {'error': _("Tu supervisor no tiene proyectos activos hoy.")}
         if project_id:
@@ -246,7 +254,9 @@ class HrFieldService(models.AbstractModel):
                 attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
             out_kind = 'lunch' if kind == 'lunch_out' else 'day'
             overtime_state = False
-            if out_kind == 'day' and attendance._field_needs_overtime_question(fields.Datetime.now()):
+            if out_kind == 'day' and attendance._field_needs_overtime_question(self._now()):
+                if overtime is None and self.env.context.get('field_offline'):
+                    overtime = True  # Marked without signal: nobody could answer, HR validates it.
                 if overtime is None:
                     return {'need_overtime': True, 'employee': employee.name}
                 overtime_state = 'pending' if overtime else False
@@ -271,7 +281,7 @@ class HrFieldService(models.AbstractModel):
         gps_distance = self._gps_check(project, latitude, longitude, has_gps, in_reasons)
         vals = {
             'employee_id': employee.id,
-            'check_in': fields.Datetime.now(),
+            'check_in': self._now(),
             'field_project_id': project.id,
             'field_supervisor_id': leader.id,
             'field_in_kind': 'lunch' if kind == 'lunch_in' else 'site',
@@ -300,7 +310,7 @@ class HrFieldService(models.AbstractModel):
         geo = self._geo(float(latitude) if has_gps else False, float(longitude) if has_gps else False, device)
         crew = employee._field_is_crew()
         attendance = self._open_attendance(employee)
-        now = fields.Datetime.now()
+        now = self._now()
         if attendance:
             if now - attendance.check_in < timedelta(minutes=REPEAT_MINUTES):
                 return {
@@ -401,7 +411,7 @@ class HrFieldService(models.AbstractModel):
             gps_distance = self._gps_check(
                 attendance.field_project_id, geo.get('latitude'), geo.get('longitude'), has_gps, reasons)
         vals = {
-            'check_out': fields.Datetime.now(),
+            'check_out': self._now(),
             'field_out_kind': out_kind,
             'field_overtime_state': overtime_state,
             'out_field_device_id': device.id,
