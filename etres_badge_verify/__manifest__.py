@@ -1,7 +1,7 @@
 {
     "name": "QR para vigencia de gafetes",
     "summary": "QR en el gafete que valida en línea si el empleado sigue activo",
-    "version": "18.0.1.0.0",
+    "version": "19.0.1.0.0",
     "category": "Human Resources",
     "author": "Constructora Etres",
     "license": "LGPL-3",

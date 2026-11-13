@@ -1,4 +1,4 @@
-ETRES - VERIFICACIÓN DE GAFETE POR QR (Odoo 18)
+ETRES - VERIFICACIÓN DE GAFETE POR QR (Odoo 19)
 ================================================
 
 QUÉ HACE

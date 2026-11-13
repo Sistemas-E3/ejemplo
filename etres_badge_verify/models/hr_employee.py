@@ -4,7 +4,7 @@ import secrets
 import unicodedata
 import zipfile
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import AccessError
 
 BADGE_ZIP_NAME = "QR_Gafetes_Etres.zip"
@@ -37,9 +37,10 @@ class HrEmployee(models.Model):
         groups="hr.group_hr_user",
     )
 
-    _sql_constraints = [
-        ("badge_token_uniq", "unique(badge_token)", "El código de gafete debe ser único."),
-    ]
+    _badge_token_uniq = models.Constraint(
+        "unique(badge_token)",
+        "El código de gafete debe ser único.",
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -97,7 +98,7 @@ class HrEmployee(models.Model):
         cientos de empleados rebasa el límite del servidor (error 414).
         """
         if not self.env.user.has_group("hr.group_hr_user"):
-            raise AccessError(_("Solo Recursos Humanos puede descargar los QR de gafetes."))
+            raise AccessError(self.env._("Solo Recursos Humanos puede descargar los QR de gafetes."))
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
             for employee in self.with_context(active_test=False):
