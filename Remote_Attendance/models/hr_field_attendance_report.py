@@ -117,6 +117,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
         employees = self._employees(filters)
         Attendance = self.env['hr.attendance'].sudo()
         schedule = Attendance._field_schedule()
+        use_projects = self.env['hr.field.service']._use_projects()
         late_minutes = int(schedule.get('late_minutes', DEFAULT_LATE_MINUTES))
         attendances = Attendance.search([
             ('employee_id', 'in', employees.ids),
@@ -159,7 +160,8 @@ class HrFieldAttendanceReport(models.AbstractModel):
                     cell['flag'] = any(
                         a.field_state == 'review'
                         or (not a.check_out and day < today)
-                        or (a.check_out and crew and not (a.field_project_id or a.field_allocation_ids))
+                        or (a.check_out and crew and use_projects
+                            and not (a.field_project_id or a.field_allocation_ids))
                         for a in marks)
                     totals['A'] += 1
                     totals['R'] += cell['code'] == 'R'

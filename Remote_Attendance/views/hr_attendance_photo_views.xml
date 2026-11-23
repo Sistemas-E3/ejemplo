@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Marcajes con foto: who marked, when, on which device and with which photo. -->
+    <record id="hr_attendance_photo_kanban" model="ir.ui.view">
+        <field name="name">hr.attendance.photo.kanban</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <kanban create="false" class="o_field_photo_kanban">
+                <field name="id"/>
+                <field name="in_field_photo"/>
+                <field name="out_field_photo"/>
+                <field name="field_state"/>
+                <templates>
+                    <t t-name="card" class="flex-row p-0">
+                        <div class="d-flex flex-column align-items-center p-1 gap-1">
+                            <img t-if="record.in_field_photo.raw_value" alt="Foto de entrada" class="rounded" style="width: 96px; height: 96px; object-fit: cover;"
+                                 t-att-src="'/web/image/hr.attendance/' + record.id.raw_value + '/in_field_photo/128x128'"/>
+                            <div t-else="" class="rounded bg-200 d-flex align-items-center justify-content-center text-muted small" style="width: 96px; height: 96px;">Sin foto</div>
+                            <img t-if="record.out_field_photo.raw_value" alt="Foto de salida" class="rounded" style="width: 96px; height: 96px; object-fit: cover;"
+                                 t-att-src="'/web/image/hr.attendance/' + record.id.raw_value + '/out_field_photo/128x128'"/>
+                        </div>
+                        <div class="p-2 flex-grow-1 small">
+                            <field name="employee_id" class="fw-bold fs-6"/>
+                            <div><span class="text-muted">Entrada </span><field name="check_in"/></div>
+                            <div class="text-muted"><field name="field_in_source"/></div>
+                            <div t-if="record.check_out.raw_value"><span class="text-muted">Salida </span><field name="check_out"/></div>
+                            <div class="text-muted"><field name="field_out_source"/></div>
+                            <field name="field_state" widget="badge" invisible="not field_state"
+                                   decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
+                                   decoration-danger="field_state == 'rejected'"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="hr_attendance_photo_list" model="ir.ui.view">
+        <field name="name">hr.attendance.photo.list</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="employee_id"/>
+                <field name="check_in"/>
+                <field name="field_in_source"/>
+                <field name="in_field_photo" widget="image" options="{'size': [40, 40]}" string="Foto entrada"/>
+                <field name="check_out"/>
+                <field name="field_out_source"/>
+                <field name="out_field_photo" widget="image" options="{'size': [40, 40]}" string="Foto salida"/>
+                <field name="field_state" widget="badge" optional="show"
+                       decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_attendance_photo_action" model="ir.actions.act_window">
+        <field name="name">Marcajes con foto</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'kanban', 'view_id': ref('hr_attendance_photo_kanban')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_photo_list')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay marcajes</p>
+            <p>Cada entrada y salida con la foto con la que checó y el teléfono, la tablet o el checador donde se registró.</p>
+        </field>
+    </record>
+</odoo>

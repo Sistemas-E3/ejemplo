@@ -54,6 +54,12 @@ class HrFieldService(models.AbstractModel):
         return self.env.context.get('field_now') or fields.Datetime.now()
 
     @api.model
+    def _use_projects(self):
+        """False when attendance is only registered, without projects (setting "Sin proyectos")."""
+        value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.without_projects')
+        return str(value).lower() not in ('1', 'true')
+
+    @api.model
     def _face_threshold(self):
         value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.face_threshold')
         try:
@@ -117,6 +123,7 @@ class HrFieldService(models.AbstractModel):
                      for e in owner._field_candidates().sorted('name')],
             'can_enroll': owner.field_role in ('supervisor', 'office'),
             'manual': owner.field_role == 'office' or self._manual_enabled(),
+            'use_projects': self._use_projects(),
             'days': [day.isoformat() for day in self._roll_days(owner)]
             if owner.field_role == 'supervisor' else [],
         }
@@ -270,15 +277,25 @@ class HrFieldService(models.AbstractModel):
                 return {'error': message}
             reasons = list(reasons) + [message]  # marked without signal: kept, for HR to check
 
+        use_projects = self._use_projects()
+        if change_project and not use_projects:
+            return {'error': _("Los proyectos están desactivados.")}
+        if kind == 'in' and attendance and not use_projects and now - attendance.check_in < repeat:
+            # Already entered at the clock or the tablet a moment ago.
+            return {'employee': employee.name, 'action': 'repeat',
+                    'time': self._local_time(employee, attendance.check_in), 'project': '',
+                    'state': attendance.field_state, 'reasons': []}
+
         # Entered at the clock or the office tablet (no project yet): "Entrada" here sets the project.
-        assign_project = kind == 'in' and attendance and not attendance.field_project_id and not change_project
+        assign_project = use_projects and kind == 'in' and attendance and not attendance.field_project_id \
+            and not change_project
         if kind in ('in', 'lunch_in') and attendance and not assign_project:
             return {'error': _("%(name)s ya tiene entrada desde las %(time)s. Marca primero su salida.",
                                name=employee.name, time=self._local_time(employee, attendance.check_in))}
         if kind in ('lunch_out', 'out') and not attendance:
             return {'error': _("%s no tiene entrada abierta hoy.", employee.name)}
         if attendance and not change_project and not assign_project:
-            if not attendance.field_project_id:
+            if not attendance.field_project_id and use_projects:
                 # Entered at the office: the hours go to the site where they mark the exit.
                 project, error = self._pick_project(leader, project_id)
                 if error:
@@ -299,9 +316,12 @@ class HrFieldService(models.AbstractModel):
             return self._check_out(attendance, device, geo, face_distance, photo, reasons, has_gps,
                                    out_kind=out_kind, overtime_state=overtime_state)
 
-        project, error = self._pick_project(leader, project_id)
-        if error:
-            return error
+        if use_projects:
+            project, error = self._pick_project(leader, project_id)
+            if error:
+                return error
+        else:
+            project = self.env['project.project']
         if attendance and not attendance.field_project_id:
             attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
             return {'employee': employee.name, 'action': 'project', 'project': project.display_name,
@@ -326,7 +346,7 @@ class HrFieldService(models.AbstractModel):
             'employee_id': employee.id,
             'check_in': self._now(),
             'field_project_id': project.id,
-            'field_supervisor_id': leader.id,
+            'field_supervisor_id': leader.id or employee._field_leader().id,
             'field_in_kind': 'lunch' if kind == 'lunch_in' else 'site',
             'field_state': 'review' if in_reasons else 'valid',
             'field_review_reason': '\n'.join(in_reasons) or False,
@@ -340,7 +360,7 @@ class HrFieldService(models.AbstractModel):
         return {
             'employee': employee.name,
             'action': 'lunch_in' if kind == 'lunch_in' else 'check_in',
-            'project': project.display_name,
+            'project': project.display_name or '',
             'state': vals['field_state'],
             'reasons': in_reasons,
         }
@@ -439,7 +459,7 @@ class HrFieldService(models.AbstractModel):
         if not has_gps:
             reasons.append(_("Sin ubicación GPS"))
             return 0
-        if not project._field_has_location():
+        if not project or not project._field_has_location():
             return 0
         distance = int(gps_distance_m(latitude, longitude, project.field_latitude, project.field_longitude))
         if distance > (project.field_radius or 0):

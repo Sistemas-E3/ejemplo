@@ -72,6 +72,13 @@
             $("btn-change").hidden = true;
             return;
         }
+        if (state.use_projects === false) {
+            $("active-projects").textContent = "Ponte frente a la cámara y toca lo que vas a marcar";
+            $("btn-projects").hidden = true;
+            $("btn-change").hidden = true;
+            $("btn-lunch").hidden = state.role !== "supervisor" || !state.manual;
+            return;
+        }
         const names = (state.active_projects || []).map((p) => p.name);
         if (names.length) {
             $("active-projects").textContent = "Proyectos de hoy: " + names.join(", ");
@@ -460,7 +467,7 @@
     }
 
     function needsProjectOffline(params) {
-        if (isOffice || params.project_id) {
+        if (isOffice || params.project_id || state.use_projects === false) {
             return false;
         }
         const projects = (state && state.active_projects) || [];

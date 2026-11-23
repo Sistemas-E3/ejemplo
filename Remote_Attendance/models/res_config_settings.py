@@ -4,6 +4,10 @@ from odoo import fields, models
 class ResConfigSettings(models.TransientModel):
     _inherit = 'res.config.settings'
 
+    field_without_projects = fields.Boolean(
+        "Registrar asistencia sin proyectos", config_parameter='Remote_Attendance.without_projects',
+        help="El teléfono solo registra la asistencia (quién, a qué hora, foto, GPS y dispositivo), "
+             "sin pedir proyecto ni generar horas en proyectos.")
     field_day_start = fields.Float("Hora de entrada", config_parameter='Remote_Attendance.day_start', default=7.0)
     field_day_end = fields.Float("Hora de salida", config_parameter='Remote_Attendance.day_end', default=17.0)
     field_late_minutes = fields.Integer(

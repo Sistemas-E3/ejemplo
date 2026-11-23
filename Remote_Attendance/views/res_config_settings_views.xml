@@ -7,6 +7,9 @@
         <field name="arch" type="xml">
             <xpath expr="//app[@name='hr_attendance']/block[1]" position="before">
                 <block title="Horario y tolerancias (teléfono, tablet y checador)" name="field_schedule_settings">
+                    <setting string="Sin proyectos" help="Solo registrar la asistencia (quién, hora, foto, GPS y dispositivo), sin pedir proyecto ni generar horas en proyectos.">
+                        <field name="field_without_projects"/>
+                    </setting>
                     <setting string="Jornada" help="Las horas antes de la entrada no cuentan; después de la salida solo cuenta el tiempo extra aprobado.">
                         <div class="d-flex gap-2 align-items-center">
                             <span>De</span><field name="field_day_start" widget="float_time" class="o_light_label" style="width: 5rem;"/>

@@ -58,6 +58,8 @@ class HrAttendance(models.Model):
     out_field_clock_id = fields.Many2one('hr.field.clock', string="Checador de salida", readonly=True)
     in_field_photo = fields.Image("Foto de entrada", max_width=640, max_height=640, attachment=True, readonly=True)
     out_field_photo = fields.Image("Foto de salida", max_width=640, max_height=640, attachment=True, readonly=True)
+    field_in_source = fields.Char("Dispositivo de entrada", compute='_compute_field_source')
+    field_out_source = fields.Char("Dispositivo de salida", compute='_compute_field_source')
     in_face_distance = fields.Float("Distancia facial entrada", digits=(4, 3), readonly=True,
                                     help="Menor es más parecido; vacío si marcó con PIN.")
     out_face_distance = fields.Float("Distancia facial salida", digits=(4, 3), readonly=True)
@@ -111,6 +113,30 @@ class HrAttendance(models.Model):
         def to_utc(hour):
             return tz.localize(datetime.combine(day, float_to_time(hour))).astimezone(pytz.utc).replace(tzinfo=None)
         return to_utc(schedule['day_start']), to_utc(schedule['day_end'])
+
+    @api.depends('in_field_device_id', 'out_field_device_id', 'in_field_clock_id', 'out_field_clock_id',
+                 'in_mode', 'out_mode', 'check_out')
+    def _compute_field_source(self):
+        for attendance in self:
+            attendance.field_in_source = attendance._field_source(
+                attendance.in_field_device_id, attendance.in_field_clock_id, attendance.in_mode)
+            attendance.field_out_source = attendance._field_source(
+                attendance.out_field_device_id, attendance.out_field_clock_id, attendance.out_mode) \
+                if attendance.check_out else False
+
+    @api.model
+    def _field_source(self, device, clock, mode):
+        """Where a mark was taken, for people: phone (whose link), office tablet, time clock or Odoo."""
+        if clock:
+            return _("Checador: %s", clock.name)
+        if device:
+            owner = device.sudo().employee_id
+            if owner.field_role == 'office':
+                return _("Tablet: %s", device.name or owner.name)
+            return _("Teléfono de %(owner)s (%(device)s)", owner=owner.name, device=device.name or '')
+        labels = {'systray': _("Odoo (usuario)"), 'manual': _("Captura manual"), 'kiosk': _("Kiosco de Odoo"),
+                  'technical': _("Sistema")}
+        return labels.get(mode, _("Odoo")) if mode else False
 
     @api.model
     def _field_hhmm(self, hour):

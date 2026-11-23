@@ -171,3 +171,23 @@ class TestFieldMixed(TransactionCase):
         attendance = self.env['hr.attendance'].search([('employee_id', '=', office.id)])
         self.assertFalse(attendance.field_state, "Office staff keep a plain attendance")
         self.assertFalse(attendance.field_project_id)
+
+    def test_without_projects(self):
+        self.env['ir.config_parameter'].sudo().set_param('Remote_Attendance.without_projects', 'True')
+        self.assertFalse(self.service._state(self.supervisor, self.device)['use_projects'])
+        self._clock(7, 0)
+        self.assertEqual(self._phone(7, 10, 'in')['action'], 'repeat', "The clock already took the entrance")
+        self.assertEqual(self._phone(12, 0, 'lunch_out')['action'], 'lunch_out')
+        result = self._phone(13, 0, 'lunch_in')
+        self.assertEqual((result['action'], result['project']), ('lunch_in', ''))
+        self.assertEqual(self._phone(17, 0, 'out')['action'], 'check_out')
+        morning, afternoon = self._attendances()
+        self.assertFalse((morning | afternoon).field_project_id)
+        self.assertEqual((morning.field_state, afternoon.field_state), ('valid', 'valid'))
+        self.assertFalse((morning | afternoon).field_timesheet_ids, "No hours in projects")
+        self.assertEqual(morning.field_in_source, 'Checador: ' + self.clock.name)
+        self.assertEqual(morning.field_out_source, 'Teléfono de Juan Supervisor (Tel)')
+        report = self.env['hr.field.attendance.report'].get_report(
+            {'date_from': '2026-09-28', 'date_to': '2026-09-28', 'search': 'Pedro'})
+        self.assertFalse(report['rows'][0]['cells'][0]['flag'], "A day without project is fine now")
+        self.assertIn('error', self._phone(17, 30, None, change_project=True))
