@@ -5,7 +5,7 @@ y convertido automáticamente en sus horas.
 
 ## Cómo funciona
 
-1. **Operaciones** (usuarios internos con el grupo *Asistencias en campo › Operaciones de campo*):
+1. **Operaciones** (usuarios internos con el grupo *Asistencias en campo › Administrador de asistencias*):
    - En *Asistencias › Campo › Proyectos* asigna supervisores a cada proyecto y captura su ubicación y radio (200 m por defecto).
    - En la ficha del empleado, pestaña **Campo**: rol (supervisor o trabajador), supervisor de la cuadrilla,
      PIN, **Generar enlace nuevo** y **Registrar rostro** (requiere consentimiento firmado).

@@ -6,13 +6,14 @@
         <field name="target">new</field>
     </record>
     <!-- One bar for field and office: the report first, then marks, loads, people, devices and settings. -->
-    <menuitem id="menu_field_marks" name="Marcajes" parent="hr_attendance.menu_hr_attendance_root" sequence="2"/>
+    <menuitem id="menu_field_marks" name="Marcajes" parent="hr_attendance.menu_hr_attendance_root" sequence="2"
+              groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="hr_attendance.menu_hr_attendance_view_attendances_management" name="Todos los marcajes"
-              parent="menu_field_marks" sequence="1"/>
+              parent="menu_field_marks" sequence="1" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
     <menuitem id="menu_field_photos" name="Marcajes con foto" parent="menu_field_marks" sequence="1"
-              action="hr_attendance_photo_action"/>
+              action="hr_attendance_photo_action" groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="hr_attendance.menu_hr_attendance_view_attendances" name="Vista general"
-              parent="menu_field_marks" sequence="2"/>
+              parent="menu_field_marks" sequence="2" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
     <menuitem id="menu_field_review" name="Por revisar" parent="menu_field_marks" sequence="3"
               action="Remote_Attendance_review_action" groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="menu_field_by_supervisor" name="Por supervisor" parent="menu_field_marks" sequence="4"
@@ -50,9 +51,10 @@
               action="hr_field_clock_action"/>
 
     <menuitem id="hr_attendance.menu_hr_attendance_reporting" name="Análisis" parent="hr_attendance.menu_hr_attendance_root"
-              sequence="6"/>
+              sequence="6" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
 
-    <menuitem id="menu_field_settings" name="Configuración" parent="hr_attendance.menu_hr_attendance_root" sequence="99"/>
+    <menuitem id="menu_field_settings" name="Configuración" parent="hr_attendance.menu_hr_attendance_root" sequence="99"
+              groups="Remote_Attendance.group_field_operations"/>
     <menuitem id="hr_attendance.menu_hr_attendance_settings" name="Ajustes" parent="menu_field_settings" sequence="1"/>
     <menuitem id="menu_field_projects" name="Proyectos" parent="menu_field_settings" sequence="2"
               action="project_project_field_action" groups="Remote_Attendance.group_field_operations"/>

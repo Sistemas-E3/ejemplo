@@ -7,18 +7,18 @@
     </record>
 
     <record id="group_field_operations" model="res.groups">
-        <field name="name">Operaciones de campo</field>
+        <field name="name">Administrador de asistencias</field>
         <field name="category_id" ref="module_category_field_attendance"/>
-        <field name="comment">Asigna supervisores y proyectos, aprueba teléfonos, registra rostros y revisa marcajes en campo.</field>
+        <field name="comment">Las únicas personas que ven y exportan los marcajes y el reporte de asistencia, aprueban teléfonos y checadores, registran rostros y cambian los ajustes del módulo.</field>
         <field name="implied_ids" eval="[(4, ref('hr.group_hr_user')), (4, ref('hr_attendance.group_hr_attendance_officer'))]"/>
         <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
     </record>
 
-    <!-- Attendance officers only see the employees they manage; Operations works with all the field staff. -->
+    <!-- Attendance officers only see the employees they manage; the attendance administrators see everybody. -->
     <record id="rule_attendance_field_operations" model="ir.rule">
-        <field name="name">Operaciones de campo: asistencias del personal de campo</field>
+        <field name="name">Administrador de asistencias: todas las asistencias</field>
         <field name="model_id" ref="hr_attendance.model_hr_attendance"/>
-        <field name="domain_force">['|', ('field_state', '!=', False), ('employee_id.field_role', '!=', False)]</field>
+        <field name="domain_force">[(1, '=', 1)]</field>
         <field name="groups" eval="[(4, ref('Remote_Attendance.group_field_operations'))]"/>
         <field name="perm_unlink" eval="False"/>
     </record>

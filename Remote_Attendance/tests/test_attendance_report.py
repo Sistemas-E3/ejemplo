@@ -3,8 +3,8 @@ from datetime import datetime
 
 from freezegun import freeze_time
 
-from odoo.exceptions import UserError
-from odoo.tests import TransactionCase, tagged
+from odoo.exceptions import AccessError, UserError
+from odoo.tests import TransactionCase, new_test_user, tagged
 
 TZ = 'America/Mexico_City'
 
@@ -66,6 +66,20 @@ class TestAttendanceReport(TransactionCase):
         self.assertEqual(ids({'scope': 'field'}), {self.beto.id})
         self.assertNotIn(self.beto.id, ids({'scope': 'office'}))
         self.assertEqual(ids({'search': '0102'}), {self.beto.id})
+
+    def test_only_attendance_administrators(self):
+        officer = new_test_user(self.env, login='rh_officer', groups='hr_attendance.group_hr_attendance_officer')
+        with self.assertRaises(AccessError):
+            self.Report.with_user(officer).get_report(self.filters)
+        with self.assertRaises(AccessError):
+            self.Report.with_user(officer).excel_file(self.filters)
+        admin = new_test_user(self.env, login='att_admin', groups='Remote_Attendance.group_field_operations')
+        self.assertTrue(self.Report.with_user(admin).get_report(dict(self.filters, search='Ana'))['rows'])
+        menus = self.env['ir.ui.menu'].with_user(officer)._visible_menu_ids()
+        for xmlid in ('Remote_Attendance.menu_field_attendance_report', 'Remote_Attendance.menu_field_marks',
+                      'Remote_Attendance.menu_field_photos', 'hr_attendance.menu_hr_attendance_view_attendances',
+                      'hr_attendance.menu_hr_attendance_reporting'):
+            self.assertNotIn(self.env.ref(xmlid).id, menus, xmlid)
 
     def test_one_year_maximum(self):
         self.Report.get_report({'date_from': '2025-10-02', 'date_to': '2026-10-01', 'search': 'Ana'})
