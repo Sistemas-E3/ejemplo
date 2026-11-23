@@ -112,6 +112,32 @@ class TestFieldClock(TransactionCase):
         self.clock.action_remove_archived()
         self.assertIn("DATA DELETE USERINFO PIN=3001", self.clock.command_ids.mapped('command'))
 
+    def test_clock_limited_to_departments(self):
+        obra = self.env['hr.department'].create({'name': 'Obra'})
+        frente = self.env['hr.department'].create({'name': 'Frente 1', 'parent_id': obra.id})
+        oficina = self.env['hr.department'].create({'name': 'Oficina'})
+        self.worker.department_id = frente
+        office = self.env['hr.employee'].create({'name': 'Laura Oficina', 'barcode': '3001',
+                                                 'field_role': 'staff', 'tz': TZ, 'department_id': oficina.id})
+        self.clock.department_ids = obra
+        self.clock.action_send_employees()
+        texts = ' '.join(self.clock.command_ids.mapped('command'))
+        self.assertIn('PIN=1042', texts, "Sub-departments of an allowed one are allowed")
+        self.assertNotIn('PIN=3001', texts)
+
+        self.clock._clock_receive("1042\t2026-09-28 07:00:00\t0\t1\n3001\t2026-09-28 09:00:00\t0\t1\n")
+        logs = {log.employee_key: log for log in self.clock.log_ids}
+        self.assertEqual(logs['1042'].state, 'entry')
+        self.assertEqual(logs['3001'].state, 'ignored')
+        self.assertIn('Oficina', logs['3001'].result)
+        self.assertFalse(self.env['hr.attendance'].search([('employee_id', '=', office.id)]))
+
+        # Opening the clock to everybody again: the ignored punch can be reprocessed.
+        self.clock.department_ids = False
+        logs['3001'].state = 'error'
+        logs['3001'].action_reprocess()
+        self.assertEqual(logs['3001'].state, 'entry')
+
     def _import(self, content, filename, clock=None):
         wizard = self.env['hr.field.clock.import'].create({
             'file': base64.b64encode(content), 'filename': filename, 'clock_id': clock and clock.id,
