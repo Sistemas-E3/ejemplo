@@ -18,6 +18,10 @@ SCHEDULE_DEFAULTS = {
     'day_end': 17.0,        # Remote_Attendance.day_end: hours after this count only as approved overtime
     'lunch_hours': 1.0,     # Remote_Attendance.lunch_hours: deducted when the lunch was not marked
     'overtime_after': 1.0,  # Remote_Attendance.overtime_after: exits this long after day_end ask for overtime
+    'late_minutes': 10.0,   # Remote_Attendance.late_minutes: entrance tolerance (later is "retardo")
+    'early_minutes': 10.0,  # Remote_Attendance.early_minutes: exit tolerance (earlier goes to review)
+    'lunch_from': 12.0,     # Remote_Attendance.lunch_from / lunch_to: when the lunch exit can be marked
+    'lunch_to': 15.0,
 }
 # Without lunch marks, the lunch is deducted only from attendances at least this long.
 LUNCH_MIN_HOURS = 6.0
@@ -107,6 +111,42 @@ class HrAttendance(models.Model):
         def to_utc(hour):
             return tz.localize(datetime.combine(day, float_to_time(hour))).astimezone(pytz.utc).replace(tzinfo=None)
         return to_utc(schedule['day_start']), to_utc(schedule['day_end'])
+
+    @api.model
+    def _field_hhmm(self, hour):
+        return float_to_time(hour).strftime('%H:%M')
+
+    def _field_local_hour(self, when):
+        """Local hour (as a float) of ``when`` for this attendance's employee."""
+        self.ensure_one()
+        tz = pytz.timezone(self.employee_id._field_tz() or 'UTC')
+        local = pytz.utc.localize(when).astimezone(tz)
+        return local.hour + local.minute / 60 + local.second / 3600
+
+    def _field_in_lunch_window(self, when, schedule=None):
+        """True when ``when`` is inside the range set for the lunch exit."""
+        schedule = schedule or self._field_schedule()
+        return schedule['lunch_from'] <= self._field_local_hour(when) <= schedule['lunch_to']
+
+    def _field_early_exit_reason(self, when, schedule=None):
+        """Review reason when leaving at ``when`` is earlier than the exit tolerance allows, else False."""
+        self.ensure_one()
+        schedule = schedule or self._field_schedule()
+        _start, end = self._field_day_bounds(schedule)
+        if when < end - timedelta(minutes=schedule['early_minutes']):
+            return _("Salió antes de las %(end)s (%(time)s)", end=self._field_hhmm(schedule['day_end']),
+                     time=self._field_hhmm(self._field_local_hour(when)))
+        return False
+
+    def _field_late_lunch_reason(self, back, schedule=None):
+        """Review reason when coming back at ``back`` from the lunch that started at this check-out."""
+        self.ensure_one()
+        schedule = schedule or self._field_schedule()
+        allowed = timedelta(hours=schedule['lunch_hours'], minutes=schedule['late_minutes'])
+        if self.check_out and back - self.check_out > allowed:
+            minutes = int((back - self.check_out).total_seconds() // 60)
+            return _("Regresó de comer tarde: %(h)s:%(m)02d de comida", h=minutes // 60, m=minutes % 60)
+        return False
 
     def _field_needs_overtime_question(self, when):
         """True when leaving at ``when`` is late enough to ask whether it is overtime."""

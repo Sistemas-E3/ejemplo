@@ -70,12 +70,33 @@
         return modelsPromise;
     }
 
-    async function startCamera(video) {
+    const CAMERA_KEY = "field_attendance_camera";
+
+    function preferredFacing() {
+        try {
+            return window.localStorage.getItem(CAMERA_KEY) || "user";
+        } catch {
+            return "user";
+        }
+    }
+
+    /** Open the front ("user") or rear ("environment") camera; without ``facing``, the last one used. */
+    async function startCamera(video, facing) {
+        facing = facing || preferredFacing();
+        if (video.srcObject) {
+            for (const track of video.srcObject.getTracks()) {
+                track.stop();
+            }
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+            video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } },
             audio: false,
         });
         video.srcObject = stream;
+        video.dataset.facing = facing;
+        // The front camera is shown as a mirror, the rear one as it is.
+        video.classList.toggle("fk-rear", facing === "environment");
+        showCameraSwitch();
         await new Promise((resolve) => {
             if (video.readyState >= 2) {
                 resolve();
@@ -85,6 +106,40 @@
         });
         return stream;
     }
+
+    async function showCameraSwitch() {
+        let cameras = 0;
+        try {
+            cameras = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput").length;
+        } catch {
+            cameras = 0;
+        }
+        for (const button of document.querySelectorAll("[data-camera-switch]")) {
+            button.hidden = cameras < 2;
+        }
+    }
+
+    async function switchCamera(video) {
+        const next = video.dataset.facing === "environment" ? "user" : "environment";
+        try {
+            window.localStorage.setItem(CAMERA_KEY, next);
+        } catch {
+            // it just will not be remembered
+        }
+        try {
+            await startCamera(video, next);
+        } catch (error) {
+            toast("No se pudo cambiar de cámara: " + error.message, "error", 6000);
+        }
+    }
+
+    document.addEventListener("click", (event) => {
+        const button = event.target.closest && event.target.closest("[data-camera-switch]");
+        if (button) {
+            const video = button.closest(".fk-camera").querySelector("video");
+            switchCamera(video);
+        }
+    });
 
     /** Detect one face and return its 128-number descriptor, or null. */
     async function detect(video, tries) {
@@ -129,5 +184,5 @@
         return 2 * r * Math.asin(Math.sqrt(a));
     }
 
-    window.FieldCommon = { rpc, loadModels, startCamera, detect, snapshot, toast, distanceMeters };
+    window.FieldCommon = { rpc, loadModels, startCamera, switchCamera, detect, snapshot, toast, distanceMeters };
 })();

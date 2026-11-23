@@ -74,6 +74,8 @@
                         <div class="fk-camera">
                             <video id="video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
                             <canvas id="canvas" hidden="hidden"></canvas>
+                        <button type="button" class="fk-cam-switch" data-camera-switch="1" hidden="hidden" title="Cambiar cámara" aria-label="Cambiar entre cámara frontal y trasera">⟲ Cámara</button>
+                            <button type="button" class="fk-cam-switch" data-camera-switch="1" hidden="hidden" title="Cambiar cámara" aria-label="Cambiar entre cámara frontal y trasera">⟲ Cámara</button>
                             <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
                         </div>
                         <div class="fk-gps" id="gps-status">Buscando ubicación…</div>

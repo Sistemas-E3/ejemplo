@@ -5,7 +5,7 @@
  * them when the signal is back. */
 "use strict";
 
-const VERSION = "field-v1";
+const VERSION = "field-v2";
 const STATIC = "/Remote_Attendance/static/";
 const PRECACHE = [
     STATIC + "src/css/field_kiosk.css",

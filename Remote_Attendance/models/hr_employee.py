@@ -152,11 +152,11 @@ class HrEmployee(models.Model):
     def _field_candidates(self):
         """Employees that can be recognised on this owner's link.
 
-        A supervisor's phone and the office kiosk recognise all the field staff, because
-        supervisors borrow people from other crews; a personal link only its owner."""
+        A supervisor's phone and the office kiosk recognise everybody registered (field and office staff),
+        because supervisors borrow people from other crews; a personal link only its owner."""
         self.ensure_one()
         if self.field_role == 'supervisor':
-            return self | self.field_crew_ids.filtered('active') | self._field_staff()
+            return self | self.field_crew_ids.filtered('active') | self._field_people()
         if self.field_role == 'office':
             return self._field_people()
         return self

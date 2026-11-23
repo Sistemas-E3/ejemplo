@@ -275,10 +275,20 @@ class HrFieldServiceClock(models.AbstractModel):
             if when - last.check_in < repeat:
                 return 'ignored', _("Repetido: ya tenía entrada a las %s.", self._local_time(employee, last.check_in)), last
             vals = {'check_out': when, 'out_field_clock_id': clock.id}
+            early = False
             if field:
+                schedule = last._field_schedule()
+                lunched = today.filtered(lambda a: a.field_out_kind == 'lunch' or a.field_in_kind == 'lunch')
+                if last == first and not lunched and last._field_in_lunch_window(when, schedule):
+                    # First exit of the day inside the lunch range: the lunch, the return opens the afternoon.
+                    last.write(dict(vals, field_out_kind='lunch', field_overtime_state=False))
+                    return 'exit', _("Salida a comer"), last
                 late = last._field_needs_overtime_question(when)
                 vals.update(field_out_kind='day', field_overtime_state='pending' if late else False)
+                early = last._field_early_exit_reason(when, schedule)
             last.write(vals)
+            if early:
+                self._clock_review(last, early)
             return 'exit', _("Salida"), last
         covering = today.filtered(lambda a: a.check_in <= when <= (a.check_out or when))
         if covering:
@@ -297,7 +307,17 @@ class HrFieldServiceClock(models.AbstractModel):
             last.write(vals)
             return 'exit', _("Salida (unida a la asistencia del día)"), last
         attendance = self._clock_new_attendance(employee, clock, when, after=last)
+        if field:
+            late = last._field_late_lunch_reason(when)
+            if late:
+                self._clock_review(attendance, late)
         return 'entry', _("Regreso de comer") if field else _("Entrada"), attendance
+
+    @api.model
+    def _clock_review(self, attendance, reason):
+        if attendance.field_state in ('valid', False):
+            attendance.field_state = 'review'
+        attendance._field_add_review_reason(reason)
 
     @api.model
     def _clock_new_attendance(self, employee, clock, when, after=None):

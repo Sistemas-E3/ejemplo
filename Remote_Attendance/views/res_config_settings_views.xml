@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_field" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.remote.attendance</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr_attendance.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='hr_attendance']/block[1]" position="before">
+                <block title="Horario y tolerancias (teléfono, tablet y checador)" name="field_schedule_settings">
+                    <setting string="Jornada" help="Las horas antes de la entrada no cuentan; después de la salida solo cuenta el tiempo extra aprobado.">
+                        <div class="d-flex gap-2 align-items-center">
+                            <span>De</span><field name="field_day_start" widget="float_time" class="o_light_label" style="width: 5rem;"/>
+                            <span>a</span><field name="field_day_end" widget="float_time" class="o_light_label" style="width: 5rem;"/>
+                        </div>
+                    </setting>
+                    <setting string="Tolerancias" help="Minutos de gracia en la entrada (después es retardo) y en la salida (antes va a revisión).">
+                        <div class="d-flex gap-2 align-items-center">
+                            <span>Entrada</span><field name="field_late_minutes" style="width: 4rem;"/>
+                            <span>Salida</span><field name="field_early_minutes" style="width: 4rem;"/>
+                            <span>min</span>
+                        </div>
+                    </setting>
+                    <setting string="Salida a comer" help="Rango en el que se puede marcar la salida a comer, y cuánto dura la comida.">
+                        <div class="d-flex gap-2 align-items-center">
+                            <span>De</span><field name="field_lunch_from" widget="float_time" style="width: 5rem;"/>
+                            <span>a</span><field name="field_lunch_to" widget="float_time" style="width: 5rem;"/>
+                            <span>dura</span><field name="field_lunch_hours" widget="float_time" style="width: 5rem;"/>
+                        </div>
+                    </setting>
+                    <setting string="Tiempo extra" help="Salir esta cantidad de tiempo después de la hora de salida pregunta si es tiempo extra.">
+                        <field name="field_overtime_after" widget="float_time" style="width: 5rem;"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
