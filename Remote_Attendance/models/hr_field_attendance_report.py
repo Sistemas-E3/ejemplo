@@ -21,6 +21,11 @@ CODES = {
     'P': "Permiso",
     'I': "Incapacidad",
 }
+LUNCH_CODES = {
+    'LO': "Comida a tiempo",
+    'TT': "Tardó más del tiempo de comida",
+    'IA': "Salió a comer y no ha regresado",
+}
 
 
 def plain(text):
@@ -142,16 +147,15 @@ class HrFieldAttendanceReport(models.AbstractModel):
             totals.update(hours=0.0, overtime=0.0)
             for day in days:
                 marks = by_day.get((employee.id, day))
-                cell = {'code': '', 'flag': False, 'hours': 0.0, 'in': '', 'out': ''}
+                cell = {'code': '', 'flag': False, 'hours': 0.0, 'in': '', 'out': '',
+                        'lunch_out': '', 'lunch_in': '', 'lunch': ''}
                 if marks:
                     first_in = pytz.utc.localize(marks[0].check_in).astimezone(tz)
                     start = self._start_hour(employee, day.weekday(), schedule)
                     limit = datetime.combine(day, datetime.min.time()) + timedelta(hours=start, minutes=late_minutes)
                     cell['code'] = 'R' if first_in.replace(tzinfo=None) > limit else 'A'
-                    last = marks[-1]
                     cell['in'] = first_in.strftime('%H:%M')
-                    if last.check_out:
-                        cell['out'] = pytz.utc.localize(last.check_out).astimezone(tz).strftime('%H:%M')
+                    cell.update(self._four_marks(marks, tz, schedule))
                     regular = sum(marks.mapped('field_regular_hours'))
                     overtime = sum(a.field_overtime_hours for a in marks
                                    if a.field_overtime_state == 'approved' or not crew)
@@ -192,6 +196,26 @@ class HrFieldAttendanceReport(models.AbstractModel):
         return days, rows, kpis
 
     @api.model
+    def _four_marks(self, marks, tz, schedule):
+        """Exit of the day, lunch exit and return of one person's attendances of a day (oldest first)."""
+        def local(moment):
+            return pytz.utc.localize(moment).astimezone(tz).strftime('%H:%M') if moment else ''
+        lunch_out = lunch_in = None
+        if len(marks) >= 2:
+            lunch_out, lunch_in = marks[0].check_out, marks[1].check_in
+        elif marks[0].field_out_kind == 'lunch':
+            lunch_out = marks[0].check_out
+        last = marks[-1]
+        out = last.check_out if last.check_out and last.check_out != lunch_out else None
+        lunch = ''
+        if lunch_out and lunch_in:
+            took = (lunch_in - lunch_out).total_seconds() / 3600
+            lunch = 'TT' if took > schedule['lunch_hours'] + 1 / 120 else 'LO'  # half a minute of rounding
+        elif lunch_out:
+            lunch = 'IA'
+        return {'out': local(out), 'lunch_out': local(lunch_out), 'lunch_in': local(lunch_in), 'lunch': lunch}
+
+    @api.model
     def _day_header(self, days):
         return [{'date': fields.Date.to_string(d), 'label': d.strftime('%d/%m'), 'weekday': WEEKDAYS[d.weekday()],
                  'weekend': d.weekday() >= 5} for d in days]
@@ -215,6 +239,7 @@ class HrFieldAttendanceReport(models.AbstractModel):
             'totals': grand,
             'day_totals': day_totals,
             'codes': CODES,
+            'lunch_codes': LUNCH_CODES,
             'companies': [{'id': c.id, 'name': c.name} for c in self.env.user.company_ids],
             'departments': [{'id': d.id, 'name': d.complete_name} for d in self.env['hr.department'].sudo().search(
                 [('company_id', 'in', self.env.user.company_ids.ids + [False])]).sorted('complete_name')],
@@ -264,21 +289,38 @@ class HrFieldAttendanceReport(models.AbstractModel):
         sheet.set_column(5 + len(days), 12 + len(days), 11)
         sheet.freeze_panes(4, 2)
 
+        # The four marks of each day: entrance, lunch exit, lunch return and exit.
         detail = book.add_worksheet("Entradas y salidas")
-        detail.write_row(0, 0, ["Fecha", "No. Empleado", "Nombre", "Código", "Entrada", "Salida", "Horas"], head)
+        detail.write_row(0, 0, ["Fecha", "No. Empleado", "Nombre", "Área", "Entrada", "Salida a comer",
+                                "Regreso de comer", "Salida", "Código", "Comida", "Horas"], head)
         line = 1
         for row in rows:
             for d, cell in zip(days, row['cells']):
                 if cell['code']:
-                    detail.write_row(line, 0, [d.strftime('%d/%m/%Y'), row['key'], row['name'], cell['code'],
-                                               cell['in'], cell['out'],
+                    detail.write_row(line, 0, [d.strftime('%d/%m/%Y'), row['key'], row['name'], row['department'],
+                                               self._ampm(cell['in']), self._ampm(cell['lunch_out']),
+                                               self._ampm(cell['lunch_in']), self._ampm(cell['out']),
+                                               cell['code'], cell['lunch'],
                                                self._hours_text(cell['hours']) if cell['hours'] else ''])
                     line += 1
+        detail.write(line + 1, 0, " · ".join(f"{c} = {n}" for c, n in list(CODES.items()) + list(LUNCH_CODES.items())))
         detail.set_column(0, 1, 12)
         detail.set_column(2, 2, 32)
-        detail.set_column(3, 6, 10)
+        detail.set_column(3, 3, 20)
+        detail.set_column(4, 7, 14)
+        detail.set_column(8, 10, 9)
+        detail.freeze_panes(1, 3)
         book.close()
         return output.getvalue(), f"Asistencia {days[0]:%Y-%m-%d} al {days[-1]:%Y-%m-%d}.xlsx"
+
+
+    @api.model
+    def _ampm(self, hhmm):
+        """'13:05' -> '01:05 p. m.', as the entrance/exit sheets people already use."""
+        if not hhmm:
+            return ''
+        hour, minute = map(int, hhmm.split(':'))
+        return f"{(hour % 12) or 12:02d}:{minute:02d} {'a. m.' if hour < 12 else 'p. m.'}"
 
 
 class IrActionsReport(models.Model):

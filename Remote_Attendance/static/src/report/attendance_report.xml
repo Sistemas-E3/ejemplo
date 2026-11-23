@@ -58,7 +58,7 @@
                     </select>
                     <input type="search" class="form-control form-control-sm o_far_search" placeholder="Buscar nombre, número, puesto… (Enter)"
                            t-att-value="state.filters.search" t-on-keydown="onSearch"/>
-                    <button class="btn btn-sm btn-success" title="Excel" t-on-click="exportExcel"><i class="fa fa-file-excel-o"/> Excel</button>
+                    <button class="btn btn-sm btn-success" title="Excel: cuadrícula y entradas y salidas con comida" t-on-click="() => this.exportExcel()"><i class="fa fa-file-excel-o"/> Excel</button>
                     <button class="btn btn-sm btn-danger" title="PDF" t-on-click="exportPdf"><i class="fa fa-file-pdf-o"/> PDF</button>
                 </div>
             </div>

@@ -108,6 +108,10 @@ export class FieldAttendanceReport extends Component {
         }
         if (cell.in) {
             parts.push(`Entrada ${cell.in}` + (cell.out ? ` · Salida ${cell.out}` : " · sin salida"));
+            if (cell.lunch_out) {
+                parts.push(`Comida ${cell.lunch_out}` + (cell.lunch_in ? ` a ${cell.lunch_in}` : " (no ha regresado)")
+                    + (cell.lunch === "TT" ? " · tardó más" : ""));
+            }
             parts.push(`Horas ${this.hours(cell.hours)}`);
         }
         if (cell.flag) {
