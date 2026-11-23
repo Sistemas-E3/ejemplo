@@ -147,6 +147,14 @@ class TestFieldOffline(TransactionCase):
         self.assertEqual(self._attendances().field_project_id, self.project_b)
         self.assertEqual(self._attendances().field_date, DAY)
 
+    def test_employee_without_role_marks_on_any_phone(self):
+        nobody = self.env['hr.employee'].create({'name': 'Rosa Sin Rol', 'tz': TZ})
+        self.env['hr.field.face'].create({'employee_id': nobody.id, 'descriptor': str(vector(4.0))})
+        with freeze_time(utc(9, 0)):
+            result = self._sync([{'uuid': 'r', 'time': iso(utc(8, 0)), 'descriptor': vector(4.0)}])[0]
+        self.assertEqual((result['state'], result['employee']), ('done', 'Rosa Sin Rol'))
+        self.assertTrue(self.env['hr.attendance'].search([('employee_id', '=', nobody.id)]))
+
     def test_office_staff_offline(self):
         staff = self.env['hr.employee'].create({'name': 'Laura Oficina', 'field_role': 'staff', 'tz': TZ})
         self.env['hr.field.face'].create({'employee_id': staff.id, 'descriptor': str(vector(3.0))})

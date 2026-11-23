@@ -85,7 +85,7 @@
                 <field name="field_key" readonly="1"/>
                 <field name="name" readonly="1"/>
                 <field name="department_id" readonly="1"/>
-                <field name="field_role" placeholder="Solo checador"/>
+                <field name="field_role" placeholder="Checador y app"/>
                 <field name="field_supervisor_id" optional="hide" invisible="field_role != 'worker'"/>
                 <field name="field_face_count" string="Rostros"/>
                 <field name="field_face_consent_date" optional="show"/>
@@ -106,7 +106,7 @@
                 <field name="barcode" string="Clave o tarjeta"/>
                 <field name="department_id"/>
                 <filter name="with_link" string="Marcan con enlace o tablet" domain="[('field_role', '!=', False)]"/>
-                <filter name="clock_only" string="Solo checador" domain="[('field_role', '=', False)]"/>
+                <filter name="clock_only" string="Sin enlace propio" domain="[('field_role', '=', False)]"/>
                 <separator/>
                 <filter name="no_face" string="Sin rostro registrado" domain="[('field_face_ids', '=', False)]"/>
                 <filter name="no_consent" string="Sin consentimiento" domain="[('field_face_consent_date', '=', False)]"/>
@@ -130,8 +130,8 @@
         <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_employee_view_list_field')})]"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Aún no hay empleados</p>
-            <p>Todo empleado activo con número de registro puede marcar en el checador. Para que marque con el
-                teléfono o la tablet, elige aquí su rol en campo.</p>
+            <p>Todo empleado activo marca en el checador (con su número de registro) y con su rostro en la
+                app del teléfono o la tablet. El rol solo hace falta para quien tendrá su propio enlace.</p>
         </field>
     </record>
 </odoo>
