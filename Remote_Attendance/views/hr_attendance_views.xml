@@ -130,12 +130,16 @@
                 <filter name="no_project" string="Sin proyecto" domain="[('check_out', '!=', False), ('field_project_id', '=', False), ('field_allocation_ids', '=', False)]"/>
                 <filter name="manual" string="Cargadas a mano" domain="[('field_loaded_by_id', '!=', False)]"/>
                 <separator/>
+                <filter name="by_phone" string="Desde teléfono o tablet" domain="['|', ('in_field_device_id', '!=', False), ('out_field_device_id', '!=', False)]"/>
+                <filter name="by_clock" string="Desde checador" domain="['|', ('in_field_clock_id', '!=', False), ('out_field_clock_id', '!=', False)]"/>
+                <separator/>
                 <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
                 <group>
                     <filter name="group_supervisor" string="Supervisor" context="{'group_by': 'field_supervisor_id'}"/>
                     <filter name="group_day" string="Día" context="{'group_by': 'field_date:day'}"/>
                     <filter name="group_project" string="Proyecto" context="{'group_by': 'field_project_id'}"/>
                     <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_device" string="Teléfono o tablet de entrada" context="{'group_by': 'in_field_device_id'}"/>
                 </group>
             </search>
         </field>

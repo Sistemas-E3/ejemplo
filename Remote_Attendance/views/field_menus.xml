@@ -9,6 +9,8 @@
     <menuitem id="menu_field_marks" name="Marcajes" parent="hr_attendance.menu_hr_attendance_root" sequence="2"/>
     <menuitem id="hr_attendance.menu_hr_attendance_view_attendances_management" name="Todos los marcajes"
               parent="menu_field_marks" sequence="1"/>
+    <menuitem id="menu_field_photos" name="Marcajes con foto" parent="menu_field_marks" sequence="1"
+              action="hr_attendance_photo_action"/>
     <menuitem id="hr_attendance.menu_hr_attendance_view_attendances" name="Vista general"
               parent="menu_field_marks" sequence="2"/>
     <menuitem id="menu_field_review" name="Por revisar" parent="menu_field_marks" sequence="3"
