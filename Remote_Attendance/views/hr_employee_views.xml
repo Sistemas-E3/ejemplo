@@ -110,7 +110,7 @@
                 <separator/>
                 <filter name="no_face" string="Sin rostro registrado" domain="[('field_face_ids', '=', False)]"/>
                 <filter name="no_consent" string="Sin consentimiento" domain="[('field_face_consent_date', '=', False)]"/>
-                <group expand="0" string="Agrupar por">
+                <group>
                     <filter name="group_role" string="Rol en campo" context="{'group_by': 'field_role'}"/>
                     <filter name="group_department" string="Departamento" context="{'group_by': 'department_id'}"/>
                 </group>
