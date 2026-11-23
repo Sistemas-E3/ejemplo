@@ -7,6 +7,7 @@
             <list string="Checadores" decoration-warning="state == 'pending'" decoration-muted="state == 'revoked'">
                 <field name="name"/>
                 <field name="serial"/>
+                <field name="department_ids" widget="many2many_tags" placeholder="Todos"/>
                 <field name="last_seen"/>
                 <field name="last_ip" optional="hide"/>
                 <field name="error_count" optional="show"/>
@@ -42,6 +43,8 @@
                             <field name="name"/>
                             <field name="serial"/>
                             <field name="tz"/>
+                            <field name="department_ids" widget="many2many_tags" placeholder="Todos los departamentos"
+                                   options="{'no_create': True}"/>
                         </group>
                         <group>
                             <field name="last_seen"/>

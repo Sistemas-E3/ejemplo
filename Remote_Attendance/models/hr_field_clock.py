@@ -28,6 +28,11 @@ class HrFieldClock(models.Model):
     ], default='pending', required=True, tracking=True)
     tz = fields.Selection(_tz_get, string="Zona horaria", required=True, default='America/Mexico_City',
                           help="La hora que muestra el checador se interpreta en esta zona.")
+    department_ids = fields.Many2many(
+        'hr.department', 'hr_field_clock_department_rel', 'clock_id', 'department_id',
+        string="Departamentos que checan aquí", tracking=True,
+        help="Vacío = todos. Con departamentos, solo su personal (y el de sus subdepartamentos) se manda a "
+             "este checador y sus marcajes cuentan; los demás quedan como ignorados.")
     last_seen = fields.Datetime("Última conexión", readonly=True)
     last_ip = fields.Char("Última IP", readonly=True)
     att_stamp = fields.Char(readonly=True, copy=False)
@@ -60,16 +65,29 @@ class HrFieldClock(models.Model):
 
     def _clock_users(self):
         """Employees that should be on the clocks: active, with a registration number or badge."""
-        employees = self.env['hr.employee'].sudo().search([('field_role', 'in', (False, 'supervisor', 'worker', 'staff'))])
+        domain = [('field_role', 'in', (False, 'supervisor', 'worker', 'staff'))]
+        if len(self) == 1 and self.department_ids:
+            domain.append(('department_id', 'child_of', self.department_ids.ids))
+        employees = self.env['hr.employee'].sudo().search(domain)
         return employees.filtered(lambda e: self._clock_pin(e))
+
+    def _clock_allows(self, employee):
+        """True when ``employee`` may punch at this clock (by its departments; none set = everybody)."""
+        self.ensure_one()
+        if not self.department_ids:
+            return True
+        allowed = self.env['hr.department'].sudo().search([('id', 'child_of', self.department_ids.ids)])
+        return employee.department_id in allowed
 
     def action_send_employees(self):
         """Create or update every active employee on the clock (number and name). Faces and fingerprints
         are still registered on the clock itself."""
-        employees = self._clock_users()
+        total = 0
         for clock in self:
+            employees = clock._clock_users()
+            total += len(employees)
             clock._clock_queue([clock._clock_user_command(e) for e in employees])
-        return self._clock_notify(_("Se mandarán %s empleados al checador en su siguiente conexión.", len(employees)))
+        return self._clock_notify(_("Se mandarán %s empleados al checador en su siguiente conexión.", total))
 
     def action_remove_archived(self):
         """Delete from the clock the employees archived in Odoo."""
@@ -218,6 +236,10 @@ class HrFieldClockLog(models.Model):
             if not employee:
                 log.write({'state': 'error', 'employee_id': False, 'result': _(
                     "La clave %s no es el número de registro de ningún empleado.", log.employee_key)})
+                continue
+            if not log.clock_id._clock_allows(employee):
+                log.write({'state': 'ignored', 'employee_id': employee.id, 'attendance_id': False, 'result': _(
+                    "Su departamento (%s) no checa en este checador.", employee.department_id.name or _("sin departamento"))})
                 continue
             try:
                 with self.env.cr.savepoint():
