@@ -68,7 +68,7 @@ class TestAttendanceReport(TransactionCase):
         self.assertEqual(ids({'search': '0102'}), {self.beto.id})
 
     def test_only_attendance_administrators(self):
-        officer = new_test_user(self.env, login='rh_officer', groups='hr_attendance.group_hr_attendance_officer')
+        officer = new_test_user(self.env, login='rh_officer', groups='base.group_user,hr_attendance.group_hr_attendance_officer')
         with self.assertRaises(AccessError):
             self.Report.with_user(officer).get_report(self.filters)
         with self.assertRaises(AccessError):
@@ -78,8 +78,10 @@ class TestAttendanceReport(TransactionCase):
         menus = self.env['ir.ui.menu'].with_user(officer)._visible_menu_ids()
         for xmlid in ('Remote_Attendance.menu_field_attendance_report', 'Remote_Attendance.menu_field_marks',
                       'Remote_Attendance.menu_field_photos', 'hr_attendance.menu_hr_attendance_view_attendances',
-                      'hr_attendance.menu_hr_attendance_reporting'):
-            self.assertNotIn(self.env.ref(xmlid).id, menus, xmlid)
+                      'hr_attendance.menu_hr_attendance_view_dashboard', 'hr_attendance.menu_hr_attendance_reporting'):
+            menu = self.env.ref(xmlid, raise_if_not_found=False)  # Vista general changed its id in Odoo 19
+            if menu:
+                self.assertNotIn(menu.id, menus, xmlid)
 
     def test_one_year_maximum(self):
         self.Report.get_report({'date_from': '2025-10-02', 'date_to': '2026-10-01', 'search': 'Ana'})
