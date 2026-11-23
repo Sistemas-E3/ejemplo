@@ -191,3 +191,27 @@ class TestFieldMixed(TransactionCase):
             {'date_from': '2026-09-28', 'date_to': '2026-09-28', 'search': 'Pedro'})
         self.assertFalse(report['rows'][0]['cells'][0]['flag'], "A day without project is fine now")
         self.assertIn('error', self._phone(17, 30, None, change_project=True))
+
+    def test_report_four_marks_and_excel(self):
+        import io
+        import openpyxl
+        self._clock(6, 55)
+        self._phone(12, 5, 'lunch_out')
+        self._clock(13, 20)  # 1:15 of lunch: more than the hour
+        self._phone(17, 0, 'out')
+        Report = self.env['hr.field.attendance.report']
+        filters = {'date_from': '2026-09-28', 'date_to': '2026-09-28', 'search': 'Pedro'}
+        cell = Report.get_report(dict(filters))['rows'][0]['cells'][0]
+        self.assertEqual((cell['in'], cell['lunch_out'], cell['lunch_in'], cell['out'], cell['lunch']),
+                         ('06:55', '12:05', '13:20', '17:00', 'TT'))
+        content, _name = Report.excel_file(dict(filters))
+        sheet = openpyxl.load_workbook(io.BytesIO(content))['Entradas y salidas']
+        self.assertEqual([c.value for c in sheet[2]][4:10],
+                         ['06:55 a. m.', '12:05 p. m.', '01:20 p. m.', '05:00 p. m.', 'A', 'TT'])
+
+    def test_report_lunch_in_progress(self):
+        self._phone(7, 0, 'in')
+        self._phone(12, 0, 'lunch_out')
+        cell = self.env['hr.field.attendance.report'].get_report(
+            {'date_from': '2026-09-28', 'date_to': '2026-09-28', 'search': 'Pedro'})['rows'][0]['cells'][0]
+        self.assertEqual((cell['lunch_out'], cell['lunch_in'], cell['out'], cell['lunch']), ('12:00', '', '', 'IA'))
