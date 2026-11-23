@@ -26,7 +26,8 @@ class HrEmployee(models.Model):
         ('staff', "Personal de oficina"),
         ('office', "Kiosco de oficina"),
     ], string="Rol en campo", groups=OPS_GROUP, tracking=True,
-        help="Personal de oficina: marca con su rostro desde su enlace o en la tablet, sin proyecto. "
+        help="Vacío: marca en el checador y con su rostro en el teléfono de cualquier supervisor o en la tablet. "
+             "Supervisor de campo: tiene su enlace y marca a cualquier empleado. Personal de oficina: marca con su rostro desde su enlace o en la tablet, sin proyecto. "
              "Kiosco de oficina: el enlace de la tablet de la entrada; reconoce a todo el personal "
              "y acepta la tarjeta (ID de credencial).")
     field_supervisor_id = fields.Many2one(
@@ -140,8 +141,9 @@ class HrEmployee(models.Model):
 
     @api.model
     def _field_people(self):
-        """Everybody who marks with their face: field staff and office staff."""
-        return self.search([('field_role', 'in', ('supervisor', 'worker', 'staff'))])
+        """Everybody who can mark: every active employee, with or without a role (only the office kiosk
+        links, which are not people, are left out). The role only decides who has a link of their own."""
+        return self.search(['|', ('field_role', '=', False), ('field_role', '!=', 'office')])
 
     def _field_is_crew(self):
         """Field staff: their days go to projects, with review and overtime to validate."""
