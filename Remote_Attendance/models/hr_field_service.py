@@ -226,7 +226,8 @@ class HrFieldService(models.AbstractModel):
                 return {'error': _("No te reconocí. Acércate a la cámara con buena luz e intenta de nuevo.")}
             return {'error': _("No te reconocí. Intenta de nuevo o marca con tu PIN."), 'need_pin': True}
         photo = clean_photo(photo)
-        if owner.field_role in ('office', 'staff'):
+        if owner.field_role in ('office', 'staff') or not employee._field_is_crew():
+            # Office staff get a plain attendance, also when a supervisor marks them on his phone.
             return self._punch_office(employee, device, face_distance, photo, reasons,
                                       latitude=latitude, longitude=longitude)
 
@@ -237,6 +238,37 @@ class HrFieldService(models.AbstractModel):
         attendance = self._open_attendance(employee)
         # Hours go to the site of whoever marks: on a supervisor's phone, his active projects.
         leader = owner if owner.field_role == 'supervisor' else employee._field_leader()
+
+        Attendance = self.env['hr.attendance']
+        schedule = Attendance._field_schedule()
+        now = self._now()
+        repeat = timedelta(minutes=REPEAT_MINUTES)
+        today = Attendance.search([('employee_id', '=', employee.id), ('field_date', '=', employee._field_today()),
+                                   ('field_state', '!=', 'rejected')], order='check_in')
+        closed = today.filtered('check_out')
+        last_closed = closed.sorted('check_out')[-1:] if closed else Attendance
+
+        # The same mark was just taken at the time clock (or on another phone): nothing to do.
+        if kind in ('lunch_out', 'out') and not attendance and last_closed and now - last_closed.check_out < repeat:
+            return {'employee': employee.name, 'action': 'repeat',
+                    'time': self._local_time(employee, last_closed.check_out),
+                    'project': last_closed.field_project_id.display_name or '', 'state': last_closed.field_state,
+                    'reasons': []}
+        if kind == 'lunch_in' and attendance and closed and now - attendance.check_in < repeat:
+            if not attendance.field_project_id and last_closed.field_project_id:
+                attendance.write({'field_project_id': last_closed.field_project_id.id,
+                                  'field_supervisor_id': last_closed.field_supervisor_id.id or leader.id})
+            return {'employee': employee.name, 'action': 'repeat',
+                    'time': self._local_time(employee, attendance.check_in),
+                    'project': attendance.field_project_id.display_name or '', 'state': attendance.field_state,
+                    'reasons': []}
+        if kind == 'lunch_out' and attendance and not attendance._field_in_lunch_window(now, schedule):
+            message = _("La salida a comer se marca de %(start)s a %(end)s.",
+                        start=Attendance._field_hhmm(schedule['lunch_from']),
+                        end=Attendance._field_hhmm(schedule['lunch_to']))
+            if not self.env.context.get('field_offline'):
+                return {'error': message}
+            reasons = list(reasons) + [message]  # marked without signal: kept, for HR to check
 
         # Entered at the clock or the office tablet (no project yet): "Entrada" here sets the project.
         assign_project = kind == 'in' and attendance and not attendance.field_project_id and not change_project
@@ -253,6 +285,10 @@ class HrFieldService(models.AbstractModel):
                     return error
                 attendance.write({'field_project_id': project.id, 'field_supervisor_id': leader.id})
             out_kind = 'lunch' if kind == 'lunch_out' else 'day'
+            if out_kind == 'day':
+                early = attendance._field_early_exit_reason(now, schedule)
+                if early:
+                    reasons = list(reasons) + [early]
             overtime_state = False
             if out_kind == 'day' and attendance._field_needs_overtime_question(self._now()):
                 if overtime is None and self.env.context.get('field_offline'):
@@ -278,6 +314,13 @@ class HrFieldService(models.AbstractModel):
                             check_geofence=False)
 
         in_reasons = list(reasons)
+        if kind == 'lunch_in' and last_closed and not attendance:
+            # Back from lunch: the exit before it was the lunch, even if it was marked at the clock.
+            if last_closed.field_out_kind != 'lunch':
+                last_closed.write({'field_out_kind': 'lunch', 'field_overtime_state': False})
+            late = last_closed._field_late_lunch_reason(now, schedule)
+            if late:
+                in_reasons.append(late)
         gps_distance = self._gps_check(project, latitude, longitude, has_gps, in_reasons)
         vals = {
             'employee_id': employee.id,

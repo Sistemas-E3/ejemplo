@@ -172,6 +172,7 @@ class TestFieldOfflineRoutes(HttpCase):
         page = self.url_open(base)
         self.assertIn('app.webmanifest', page.text)
         self.assertIn('field_offline.js', page.text)
+        self.assertIn('data-camera-switch', page.text)
         manifest = json.loads(self.url_open(base + '/app.webmanifest').text)
         self.assertEqual(manifest['start_url'], base)
         worker = self.url_open('/campo/sw.js')

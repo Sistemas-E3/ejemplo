@@ -105,6 +105,9 @@ class TestFieldAttendance(TransactionCase):
 
         result = self._punch(self.sup_device, descriptor=vector(0.98))
         self.assertEqual(result['action'], 'check_out')
+        self.assertEqual(result['state'], 'review', "Leaving at 12:00 is before the exit tolerance")
+        self.assertIn('Salió antes de las 17:00', attendance.field_review_reason)
+        attendance.action_field_approve()
         line = attendance.field_timesheet_ids
         self.assertEqual(len(line), 1)
         self.assertEqual(line.project_id, self.project_a)

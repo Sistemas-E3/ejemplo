@@ -150,3 +150,8 @@ body {
     color: #92400e;
 }
 .fk-offline.fk-offline-sending { background: #dbeafe; color: #1e40af; }
+
+/* Cámara frontal (en espejo) o trasera */
+.fk-camera video.fk-rear { transform: none; }
+.fk-cam-switch { position: absolute; top: 8px; right: 8px; border: 0; border-radius: 999px; padding: 6px 12px; font-size: 14px; background: rgba(0, 0, 0, .55); color: #fff; }
+.fk-cam-switch[hidden] { display: none; }

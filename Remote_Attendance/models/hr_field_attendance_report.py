@@ -116,12 +116,8 @@ class HrFieldAttendanceReport(models.AbstractModel):
         days = self._dates(filters.get('date_from'), filters.get('date_to'))
         employees = self._employees(filters)
         Attendance = self.env['hr.attendance'].sudo()
-        params = self.env['ir.config_parameter'].sudo()
-        try:
-            late_minutes = int(params.get_param('Remote_Attendance.late_minutes') or DEFAULT_LATE_MINUTES)
-        except ValueError:
-            late_minutes = DEFAULT_LATE_MINUTES
         schedule = Attendance._field_schedule()
+        late_minutes = int(schedule.get('late_minutes', DEFAULT_LATE_MINUTES))
         attendances = Attendance.search([
             ('employee_id', 'in', employees.ids),
             ('field_date', '>=', days[0]), ('field_date', '<=', days[-1]),
