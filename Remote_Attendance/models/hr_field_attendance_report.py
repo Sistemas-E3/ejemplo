@@ -39,9 +39,8 @@ class HrFieldAttendanceReport(models.AbstractModel):
 
     def _check_access(self):
         user = self.env.user
-        if not (user.has_group('Remote_Attendance.group_field_operations')
-                or user.has_group('hr_attendance.group_hr_attendance_officer')):
-            raise AccessError(_("Solo Operaciones y RH pueden ver el reporte de asistencia."))
+        if not user.has_group('Remote_Attendance.group_field_operations'):
+            raise AccessError(_("Solo el grupo Administrador de asistencias puede ver y exportar el reporte."))
 
     @api.model
     def _dates(self, date_from, date_to):
