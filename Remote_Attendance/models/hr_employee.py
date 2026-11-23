@@ -60,9 +60,8 @@ class HrEmployee(models.Model):
 
     @api.depends('field_token')
     def _compute_field_kiosk_url(self):
-        base_url = self.get_base_url()
         for employee in self:
-            employee.field_kiosk_url = employee.field_token and f"{base_url}/campo/{employee.field_token}"
+            employee.field_kiosk_url = employee.field_token and f"{employee.get_base_url()}/campo/{employee.field_token}"
 
     def _field_key_values(self):
         """Keys that identify the employee: payroll registration number, then badge (ID de credencial)."""
