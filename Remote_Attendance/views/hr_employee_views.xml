@@ -8,7 +8,7 @@
             <xpath expr="//page[@name='hr_settings']" position="after">
                 <page name="field_attendance" string="Campo" groups="Remote_Attendance.group_field_operations">
                     <group>
-                        <group string="Rol">
+                        <group string="Enlace propio (solo supervisores y oficina)">
                             <field name="field_role"/>
                             <field name="field_key" invisible="field_role == 'office'"/>
                             <field name="barcode" string="Tarjeta (ID de credencial)" invisible="field_role == 'office'"
@@ -81,17 +81,15 @@
         <field name="model">hr.employee</field>
         <field name="priority">100</field>
         <field name="arch" type="xml">
-            <list string="Quién marca y cómo" editable="top" create="0">
+            <list string="Personal y rostros" editable="top" create="0">
                 <field name="field_key" readonly="1"/>
                 <field name="name" readonly="1"/>
                 <field name="department_id" readonly="1"/>
-                <field name="field_role" placeholder="Checador y app"/>
-                <field name="field_supervisor_id" optional="hide" invisible="field_role != 'worker'"/>
                 <field name="field_face_count" string="Rostros"/>
                 <field name="field_face_consent_date" optional="show"/>
                 <field name="field_kiosk_url" string="Enlace" widget="CopyClipboardChar" optional="hide" readonly="1"/>
                 <button name="action_field_enroll_face" type="object" string="Registrar rostro" icon="fa-camera"
-                        invisible="not field_role" groups="Remote_Attendance.group_field_operations"/>
+                        groups="Remote_Attendance.group_field_operations"/>
             </list>
         </field>
     </record>
@@ -101,17 +99,13 @@
         <field name="model">hr.employee</field>
         <field name="priority">100</field>
         <field name="arch" type="xml">
-            <search string="Quién marca y cómo">
+            <search string="Personal y rostros">
                 <field name="name"/>
                 <field name="barcode" string="Clave o tarjeta"/>
                 <field name="department_id"/>
-                <filter name="with_link" string="Marcan con enlace o tablet" domain="[('field_role', '!=', False)]"/>
-                <filter name="clock_only" string="Sin enlace propio" domain="[('field_role', '=', False)]"/>
-                <separator/>
                 <filter name="no_face" string="Sin rostro registrado" domain="[('field_face_ids', '=', False)]"/>
                 <filter name="no_consent" string="Sin consentimiento" domain="[('field_face_consent_date', '=', False)]"/>
                 <group>
-                    <filter name="group_role" string="Rol en campo" context="{'group_by': 'field_role'}"/>
                     <filter name="group_department" string="Departamento" context="{'group_by': 'department_id'}"/>
                 </group>
                 <searchpanel>
@@ -122,7 +116,7 @@
     </record>
 
     <record id="hr_employee_field_action" model="ir.actions.act_window">
-        <field name="name">Quién marca y cómo</field>
+        <field name="name">Personal y rostros</field>
         <field name="res_model">hr.employee</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[]</field>
@@ -131,7 +125,7 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Aún no hay empleados</p>
             <p>Todo empleado activo marca en el checador (con su número de registro) y con su rostro en la
-                app del teléfono o la tablet. El rol solo hace falta para quien tendrá su propio enlace.</p>
+                app del teléfono o la tablet.</p>
         </field>
     </record>
 </odoo>
