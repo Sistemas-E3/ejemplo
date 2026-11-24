@@ -38,7 +38,7 @@
 
     <menuitem id="menu_field_people" name="Personal" parent="hr_attendance.menu_hr_attendance_root" sequence="4"
               groups="Remote_Attendance.group_field_operations"/>
-    <menuitem id="menu_field_employees" name="Quién marca y cómo" parent="menu_field_people" sequence="1"
+    <menuitem id="menu_field_employees" name="Personal y rostros" parent="menu_field_people" sequence="1"
               action="hr_employee_field_action"/>
     <menuitem id="menu_field_enroll_photos" name="Registrar rostros con foto" parent="menu_field_people" sequence="2"
               action="action_field_enroll_photos"/>
