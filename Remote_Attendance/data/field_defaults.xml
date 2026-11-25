@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Asistencia sin proyectos: solo entrada, salida a comer, regreso y salida, sin horas en proyectos. -->
+    <function model="ir.config_parameter" name="set_param"
+              eval="('Remote_Attendance.without_projects', 'True')"/>
+</odoo>

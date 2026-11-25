@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_attendance_view_form_field" model="ir.ui.view">
+        <field name="name">hr.attendance.form.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.hr_attendance_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Campo" invisible="not field_state" name="field_attendance">
+                    <group>
+                        <field name="field_project_id" invisible="not field_project_id"/>
+                        <field name="field_supervisor_id"/>
+                        <field name="field_loaded_by_id" invisible="not field_loaded_by_id"/>
+                        <field name="field_skip_lunch" invisible="not field_loaded_by_id"/>
+                        <field name="field_in_kind" invisible="not field_in_kind"/>
+                        <field name="field_out_kind" invisible="not field_out_kind"/>
+                        <field name="field_regular_hours" widget="float_time" invisible="not check_out"/>
+                        <field name="field_overtime_hours" widget="float_time" invisible="not field_overtime_state"/>
+                        <field name="field_overtime_state" readonly="1" invisible="not field_overtime_state"/>
+                        <div colspan="2" groups="Remote_Attendance.group_field_operations" invisible="field_overtime_state != 'pending'">
+                            <button name="action_field_overtime_approve" type="object" string="Aprobar tiempo extra" class="btn-primary"/>
+                            <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra" class="btn-secondary"/>
+                        </div>
+                        <field name="field_state" readonly="1"/>
+                        <field name="field_review_reason" invisible="not field_review_reason"/>
+                        <field name="field_timesheet_ids" widget="many2many_tags" invisible="not field_timesheet_ids"
+                               groups="hr_timesheet.group_hr_timesheet_approver"/>
+                        <div colspan="2" groups="Remote_Attendance.group_field_operations">
+                            <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"
+                                    invisible="field_state not in ('review', 'rejected')"/>
+                            <button name="action_field_reject" type="object" string="Rechazar" class="btn-secondary"
+                                    invisible="field_state == 'rejected'"/>
+                        </div>
+                    </group>
+                    <group>
+                        <field name="in_gps_distance"/>
+                        <field name="out_gps_distance"/>
+                        <field name="in_face_distance"/>
+                        <field name="out_face_distance"/>
+                        <field name="in_field_device_id"/>
+                        <field name="out_field_device_id"/>
+                        <field name="in_field_clock_id" invisible="not in_field_clock_id"/>
+                        <field name="out_field_clock_id" invisible="not out_field_clock_id"/>
+                    </group>
+                    <field name="field_allocation_ids" colspan="2" invisible="not field_allocation_ids" readonly="1">
+                        <list>
+                            <field name="project_id"/>
+                            <field name="name"/>
+                            <field name="fraction"/>
+                            <field name="hours" widget="float_time"/>
+                            <field name="supervisor_id"/>
+                        </list>
+                    </field>
+                    <group>
+                        <field name="in_field_photo" widget="image" options="{'size': [180, 180]}" invisible="not in_field_photo"/>
+                    </group>
+                    <group>
+                        <field name="out_field_photo" widget="image" options="{'size': [180, 180]}" invisible="not out_field_photo"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_list_field_inherit" model="ir.ui.view">
+        <field name="name">hr.attendance.list.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="inherit_id" ref="hr_attendance.view_attendance_tree"/>
+        <field name="arch" type="xml">
+            <field name="check_in" position="before">
+                <field name="field_project_id" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_list_field" model="ir.ui.view">
+        <field name="name">hr.attendance.list.field.review</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Marcajes en campo" create="false" duplicate="false" editable="bottom">
+                <header>
+                    <button name="action_field_approve" type="object" string="Aprobar" class="btn-primary"/>
+                    <button name="action_field_reject" type="object" string="Rechazar"/>
+                    <button name="action_field_overtime_approve" type="object" string="Aprobar tiempo extra"/>
+                    <button name="action_field_overtime_reject" type="object" string="Rechazar tiempo extra"/>
+                </header>
+                <field name="employee_id" widget="many2one_avatar_employee" readonly="1"/>
+                <field name="field_project_id" string="Proyecto" options="{'no_create': True}" column_invisible="1"
+                       readonly="field_allocation_ids" groups="Remote_Attendance.group_field_operations"/>
+                <field name="field_department_id" optional="show" readonly="1"/>
+                <field name="field_allocation_ids" column_invisible="1"/>
+                <field name="field_supervisor_id" optional="show"/>
+                <field name="check_in" readonly="1"/>
+                <field name="field_in_kind" optional="show"/>
+                <field name="check_out" readonly="1"/>
+                <field name="field_out_kind" optional="show"/>
+                <field name="field_regular_hours" widget="float_time" string="Horas" sum="Horas"/>
+                <field name="field_overtime_hours" widget="float_time" optional="show" sum="Extra"/>
+                <field name="field_overtime_state" optional="show" widget="badge" readonly="1"
+                       decoration-warning="field_overtime_state == 'pending'" decoration-success="field_overtime_state == 'approved'"
+                       decoration-danger="field_overtime_state == 'rejected'"/>
+                <field name="in_gps_distance" optional="show"/>
+                <field name="field_review_reason" optional="show"/>
+                <field name="field_loaded_by_id" optional="hide"/>
+                <field name="field_state" widget="badge" readonly="1"
+                       decoration-warning="field_state == 'review'" decoration-success="field_state in ('valid', 'approved')"
+                       decoration-danger="field_state == 'rejected'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="hr_attendance_view_search_field" model="ir.ui.view">
+        <field name="name">hr.attendance.search.field</field>
+        <field name="model">hr.attendance</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="field_department_id"/>
+                <field name="field_supervisor_id"/>
+                <filter name="review" string="En revisión" domain="[('field_state', '=', 'review')]"/>
+                <filter name="rejected" string="Rechazadas" domain="[('field_state', '=', 'rejected')]"/>
+                <filter name="overtime" string="Tiempo extra por validar" domain="[('field_overtime_state', '=', 'pending')]"/>
+                <filter name="manual" string="Cargadas a mano" domain="[('field_loaded_by_id', '!=', False)]"/>
+                <separator/>
+                <filter name="by_phone" string="Desde teléfono o tablet" domain="['|', ('in_field_device_id', '!=', False), ('out_field_device_id', '!=', False)]"/>
+                <filter name="by_clock" string="Desde checador" domain="['|', ('in_field_clock_id', '!=', False), ('out_field_clock_id', '!=', False)]"/>
+                <separator/>
+                <filter name="check_in_filter" string="Fecha de entrada" date="check_in"/>
+                <group>
+                    <filter name="group_supervisor" string="Supervisor" context="{'group_by': 'field_supervisor_id'}"/>
+                    <filter name="group_day" string="Día" context="{'group_by': 'field_date:day'}"/>
+                    <filter name="group_department" string="Departamento" context="{'group_by': 'field_department_id'}"/>
+                    <filter name="group_employee" string="Empleado" context="{'group_by': 'employee_id'}"/>
+                    <filter name="group_device" string="Teléfono o tablet de entrada" context="{'group_by': 'in_field_device_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="Remote_Attendance_review_action" model="ir.actions.act_window">
+        <field name="name">Marcajes por revisar</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_review': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nada por revisar</p>
+            <p>Aquí aparecen los marcajes fuera del proyecto, sin GPS, hechos con PIN o con la comida registrada después.</p>
+        </field>
+    </record>
+
+    <record id="Remote_Attendance_by_supervisor_action" model="ir.actions.act_window">
+        <field name="name">Asistencia por supervisor</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_group_supervisor': 1, 'search_default_group_day': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay asistencias en campo</p>
+            <p>Aquí se ve la asistencia agrupada por el supervisor que trae a cada persona y por día.</p>
+        </field>
+    </record>
+
+    <record id="Remote_Attendance_overtime_action" model="ir.actions.act_window">
+        <field name="name">Tiempo extra por validar</field>
+        <field name="res_model">hr.attendance</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('field_overtime_state', '!=', False)]</field>
+        <field name="search_view_id" ref="hr_attendance_view_search_field"/>
+        <field name="context">{'search_default_overtime': 1}</field>
+        <field name="view_ids" eval="[(5, 0, 0), (0, 0, {'view_mode': 'list', 'view_id': ref('hr_attendance_view_list_field')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nada por validar</p>
+            <p>Aquí aparecen las salidas de más de una hora después del horario que el supervisor marcó como tiempo extra.
+               Las horas extra se cargan al proyecto al aprobarlas.</p>
+        </field>
+    </record>
+</odoo>

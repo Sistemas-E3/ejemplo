@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="ir_cron_field_timesheet_list_cleanup" model="ir.cron">
+        <field name="name">Asistencias en campo: borrar listas de horas viejas</field>
+        <field name="model_id" ref="model_hr_field_timesheet_list"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_delete_old()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+    </record>
+</odoo>

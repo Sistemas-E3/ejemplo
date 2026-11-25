@@ -1,0 +1,188 @@
+/* Asistencias en campo: utilidades compartidas por el kiosco y el registro de rostros. */
+(function () {
+    "use strict";
+
+    const MODEL_URL = "/Remote_Attendance/static/lib/face-api/model";
+    let modelsPromise = null;
+    let toastTimer = null;
+
+    async function rpc(url, params) {
+        // A weak signal can leave the request hanging: after 20 seconds it counts as no signal.
+        const controller = window.AbortController ? new AbortController() : null;
+        const timer = controller && setTimeout(() => controller.abort(), 20000);
+        let response;
+        try {
+            response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ jsonrpc: "2.0", method: "call", id: Date.now(), params: params || {} }),
+                signal: controller ? controller.signal : undefined,
+            });
+        } catch (cause) {
+            const error = new Error("Sin conexión con el servidor");
+            error.offline = true;
+            error.cause = cause;
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            const error = new Error("Sin conexión con el servidor");
+            error.offline = true;
+            throw error;
+        }
+        if (payload.error) {
+            const data = payload.error.data || {};
+            throw new Error(data.message || payload.error.message || "Error del servidor");
+        }
+        return payload.result;
+    }
+
+    async function chooseBackend() {
+        // The bundle prefers the WASM backend, whose files are not shipped: use the phone's GPU
+        // (WebGL) and fall back to the CPU, which is slower but works everywhere.
+        for (const name of ["webgl", "cpu"]) {
+            try {
+                if (await faceapi.tf.setBackend(name)) {
+                    await faceapi.tf.ready();
+                    return name;
+                }
+            } catch {
+                // try the next one
+            }
+        }
+        throw new Error("Este navegador no puede hacer el reconocimiento facial");
+    }
+
+    function loadModels() {
+        if (!modelsPromise) {
+            modelsPromise = chooseBackend().then(() => Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+            ]));
+            modelsPromise.catch(() => (modelsPromise = null));
+        }
+        return modelsPromise;
+    }
+
+    const CAMERA_KEY = "field_attendance_camera";
+
+    function preferredFacing() {
+        try {
+            return window.localStorage.getItem(CAMERA_KEY) || "user";
+        } catch {
+            return "user";
+        }
+    }
+
+    /** Open the front ("user") or rear ("environment") camera; without ``facing``, the last one used. */
+    async function startCamera(video, facing) {
+        facing = facing || preferredFacing();
+        if (video.srcObject) {
+            for (const track of video.srcObject.getTracks()) {
+                track.stop();
+            }
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facing }, width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: false,
+        });
+        video.srcObject = stream;
+        video.dataset.facing = facing;
+        // The front camera is shown as a mirror, the rear one as it is.
+        video.classList.toggle("fk-rear", facing === "environment");
+        showCameraSwitch();
+        await new Promise((resolve) => {
+            if (video.readyState >= 2) {
+                resolve();
+            } else {
+                video.onloadeddata = () => resolve();
+            }
+        });
+        return stream;
+    }
+
+    async function showCameraSwitch() {
+        let cameras = 0;
+        try {
+            cameras = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput").length;
+        } catch {
+            cameras = 0;
+        }
+        for (const button of document.querySelectorAll("[data-camera-switch]")) {
+            button.hidden = cameras < 2;
+        }
+    }
+
+    async function switchCamera(video) {
+        const next = video.dataset.facing === "environment" ? "user" : "environment";
+        try {
+            window.localStorage.setItem(CAMERA_KEY, next);
+        } catch {
+            // it just will not be remembered
+        }
+        try {
+            await startCamera(video, next);
+        } catch (error) {
+            toast("No se pudo cambiar de cámara: " + error.message, "error", 6000);
+        }
+    }
+
+    document.addEventListener("click", (event) => {
+        const button = event.target.closest && event.target.closest("[data-camera-switch]");
+        if (button) {
+            const video = button.closest(".fk-camera").querySelector("video");
+            switchCamera(video);
+        }
+    });
+
+    /** Detect one face and return its 128-number descriptor, or null. */
+    async function detect(video, tries) {
+        const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+        for (let i = 0; i < (tries || 3); i++) {
+            const result = await faceapi
+                .detectSingleFace(video, options)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            if (result) {
+                return Array.from(result.descriptor);
+            }
+            await new Promise((r) => setTimeout(r, 250));
+        }
+        return null;
+    }
+
+    function snapshot(video, canvas) {
+        const width = 480;
+        const height = Math.round((video.videoHeight / video.videoWidth) * width) || 360;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(video, 0, 0, width, height);
+        return canvas.toDataURL("image/jpeg", 0.7);
+    }
+
+    function toast(message, kind, ms) {
+        const el = document.getElementById("toast");
+        el.textContent = message;
+        el.className = "fk-toast fk-toast-" + (kind || "info");
+        el.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (el.hidden = true), ms || 4000);
+    }
+
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+        const r = 6371000;
+        const rad = (d) => (d * Math.PI) / 180;
+        const dphi = rad(lat2 - lat1);
+        const dl = rad(lon2 - lon1);
+        const a = Math.sin(dphi / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dl / 2) ** 2;
+        return 2 * r * Math.asin(Math.sqrt(a));
+    }
+
+    window.FieldCommon = { rpc, loadModels, startCamera, switchCamera, detect, snapshot, toast, distanceMeters };
+})();

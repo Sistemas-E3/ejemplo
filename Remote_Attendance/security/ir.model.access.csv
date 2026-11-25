@@ -1,0 +1,15 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_hr_field_device_ops,hr.field.device operaciones,model_hr_field_device,group_field_operations,1,1,1,1
+access_hr_field_face_ops,hr.field.face operaciones,model_hr_field_face,group_field_operations,1,1,1,1
+access_project_project_field_ops,project.project operaciones de campo,project.model_project_project,group_field_operations,1,1,0,0
+access_hr_field_allocation_ops,hr.field.allocation operaciones,model_hr_field_allocation,group_field_operations,1,1,1,1
+access_hr_field_allocation_att,hr.field.allocation asistencias,model_hr_field_allocation,hr_attendance.group_hr_attendance_officer,1,0,0,0
+access_hr_field_manual_load_ops,hr.field.manual.load operaciones,model_hr_field_manual_load,group_field_operations,1,1,1,1
+access_hr_field_manual_line_ops,hr.field.manual.line operaciones,model_hr_field_manual_line,group_field_operations,1,1,1,1
+access_hr_field_timesheet_list_ops,hr.field.timesheet.list operaciones,model_hr_field_timesheet_list,group_field_operations,1,1,1,1
+access_hr_field_timesheet_list_line_ops,hr.field.timesheet.list.line operaciones,model_hr_field_timesheet_list_line,group_field_operations,1,1,1,1
+access_hr_field_clock_ops,hr.field.clock operaciones,model_hr_field_clock,group_field_operations,1,1,1,1
+access_hr_field_clock_log_ops,hr.field.clock.log operaciones,model_hr_field_clock_log,group_field_operations,1,1,0,0
+access_hr_field_clock_command_ops,hr.field.clock.command operaciones,model_hr_field_clock_command,group_field_operations,1,0,0,1
+access_hr_field_clock_import_ops,hr.field.clock.import operaciones,model_hr_field_clock_import,group_field_operations,1,1,1,1
+access_hr_field_offline_punch_ops,hr.field.offline.punch operaciones,model_hr_field_offline_punch,group_field_operations,1,0,0,0

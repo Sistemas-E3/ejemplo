@@ -1,0 +1,251 @@
+import re
+import secrets
+from datetime import datetime, timedelta
+
+import pytz
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+OPS_GROUP = 'Remote_Attendance.group_field_operations'
+PIN_MAX_FAILURES = 5
+PIN_LOCK_MINUTES = 15
+
+
+def compact_key(text):
+    """Employee key without spaces, dashes or case: "E-0042" -> "e0042"."""
+    return re.sub(r'[^a-z0-9]', '', (text or '').lower())
+
+
+class HrEmployee(models.Model):
+    _inherit = 'hr.employee'
+
+    field_role = fields.Selection([
+        ('supervisor', "Supervisor (marca a su cuadrilla)"),
+        ('worker', "Enlace personal con botones"),
+        ('staff', "Enlace personal automático"),
+        ('office', "Tablet de oficina (kiosco)"),
+    ], string="Rol del enlace", groups=OPS_GROUP, tracking=True,
+        help="Todos los empleados registran su asistencia igual (entrada, salida a comer, regreso y salida) "
+             "en el teléfono del supervisor, la tablet o el checador; esto solo decide si tiene un enlace propio. "
+             "Vacío: sin enlace propio. Supervisor: su teléfono marca a cualquier empleado. "
+             "Enlace personal con botones: marca desde su teléfono eligiendo qué marca. "
+             "Enlace personal automático: marca desde su teléfono solo con el rostro. "
+             "Tablet de oficina: el enlace de la tablet de la entrada; reconoce a todo el personal "
+             "y acepta la tarjeta (ID de credencial).")
+    field_supervisor_id = fields.Many2one(
+        'hr.employee', string="Supervisor de su cuadrilla", groups=OPS_GROUP, tracking=True,
+        domain=[('field_role', '=', 'supervisor')], index='btree_not_null')
+    field_crew_ids = fields.One2many(
+        'hr.employee', 'field_supervisor_id', string="Cuadrilla", groups=OPS_GROUP)
+    field_project_ids = fields.Many2many(
+        'project.project', 'project_field_supervisor_rel', 'employee_id', 'project_id',
+        string="Proyectos asignados", groups=OPS_GROUP,
+        help="Proyectos que este supervisor puede activar. Las asigna Operaciones.")
+    field_active_project_ids = fields.Many2many(
+        'project.project', 'hr_employee_field_active_project_rel', 'employee_id', 'project_id',
+        string="Proyectos activos", groups=OPS_GROUP, readonly=True)
+    field_active_date = fields.Date("Proyectos activos del día", groups=OPS_GROUP, readonly=True)
+    field_token = fields.Char("Clave del enlace", groups=OPS_GROUP, copy=False, index='btree_not_null')
+    field_kiosk_url = fields.Char("Enlace de marcaje", compute='_compute_field_kiosk_url', groups=OPS_GROUP)
+    field_device_ids = fields.One2many('hr.field.device', 'employee_id', string="Teléfonos", groups=OPS_GROUP)
+    field_face_ids = fields.One2many('hr.field.face', 'employee_id', string="Rostros", groups=OPS_GROUP)
+    field_face_count = fields.Integer("Rostros registrados", compute='_compute_field_face_count', groups=OPS_GROUP)
+    field_face_consent_date = fields.Date(
+        "Consentimiento biométrico", groups=OPS_GROUP, tracking=True,
+        help="Fecha en que el empleado firmó el consentimiento para el uso de su rostro.")
+    field_link = fields.Selection([
+        ('supervisor', "Supervisor con botones"),
+        ('supervisor_auto', "Supervisor automático"),
+        ('worker', "Enlace personal con botones"),
+        ('staff', "Enlace personal automático"),
+        ('office', "Tablet de oficina (kiosco)"),
+    ], string="Enlace", compute='_compute_field_link', inverse='_inverse_field_link', groups=OPS_GROUP,
+        help="Todos registran su asistencia igual (entrada, salida a comer, regreso y salida); esto solo decide "
+             "si la persona tiene un enlace propio y cómo marca en él. Vacío: sin enlace propio (checa en el "
+             "checador, la tablet o el teléfono de su supervisor).\n"
+             "Supervisor con botones: su teléfono marca a cualquier empleado y él toca qué marca es.\n"
+             "Supervisor automático: su teléfono marca a cualquier empleado y la marca se deduce sola por la hora.\n"
+             "Enlace personal con botones / automático: la persona marca desde su propio teléfono.\n"
+             "Tablet de oficina: la tablet de la entrada; reconoce a todo el personal y acepta la tarjeta.")
+    field_auto_mark = fields.Boolean(
+        "Marcaje automático", groups=OPS_GROUP, tracking=True,
+        help="Solo supervisores: su teléfono funciona como la tablet. Reconoce a cualquier empleado y la marca "
+             "(entrada, salida a comer, regreso o salida) se deduce sola por la hora, sin tocar botones. "
+             "Sigue guardando el GPS y puede registrar rostros con su PIN.")
+    field_key = fields.Char(
+        "Clave", compute='_compute_field_key', groups=OPS_GROUP,
+        help="Número de registro del empleado (nómina); si no tiene, su ID de credencial.")
+    field_pin_failures = fields.Integer(groups=OPS_GROUP, copy=False)
+    field_pin_locked_until = fields.Datetime("PIN bloqueado hasta", groups=OPS_GROUP, copy=False)
+
+    _field_token_unique = models.Constraint('UNIQUE(field_token)', "La clave del enlace debe ser única.")
+
+    @api.depends('field_role', 'field_auto_mark')
+    def _compute_field_link(self):
+        for employee in self:
+            role = employee.field_role
+            employee.field_link = 'supervisor_auto' if role == 'supervisor' and employee.field_auto_mark else role
+
+    def _inverse_field_link(self):
+        for employee in self:
+            link = employee.field_link
+            employee.write({
+                'field_role': 'supervisor' if link == 'supervisor_auto' else (link or False),
+                'field_auto_mark': link == 'supervisor_auto',
+            })
+
+    @api.depends('field_token')
+    def _compute_field_kiosk_url(self):
+        for employee in self:
+            employee.field_kiosk_url = employee.field_token and f"{employee.get_base_url()}/campo/{employee.field_token}"
+
+    def _field_key_values(self):
+        """Keys that identify the employee: payroll registration number, then badge (ID de credencial)."""
+        self.ensure_one()
+        values = [self.registration_number] if 'registration_number' in self._fields else []
+        return [value for value in values + [self.barcode] if compact_key(value)]
+
+    @api.depends('barcode')
+    def _compute_field_key(self):
+        for employee in self:
+            keys = employee._field_key_values()
+            employee.field_key = keys[0] if keys else False
+
+    @api.depends('field_face_ids')
+    def _compute_field_face_count(self):
+        for employee in self:
+            employee.field_face_count = len(employee.field_face_ids)
+
+    # ------------------------------------------------------------------
+    # Actions (Operaciones)
+    # ------------------------------------------------------------------
+
+    def action_field_regenerate_token(self):
+        """Create a new secret link; the previous link and its phones stop working."""
+        for employee in self:
+            if not employee.field_role:
+                raise UserError(_("Elige primero el tipo de enlace de %s.", employee.name))
+            employee.sudo().field_device_ids.filtered(lambda d: d.state != 'revoked').action_revoke()
+            employee.field_token = secrets.token_urlsafe(24)
+
+    def action_field_unlock_pin(self):
+        self.write({'field_pin_failures': 0, 'field_pin_locked_until': False})
+
+    def action_field_enroll_face(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/campo/enrolar/{self.id}',
+            'target': 'new',
+        }
+
+    def action_field_clear_faces(self):
+        self.sudo().field_face_ids.unlink()
+
+    # ------------------------------------------------------------------
+    # Helpers used by the kiosk (called with sudo)
+    # ------------------------------------------------------------------
+
+    def _field_today(self):
+        self.ensure_one()
+        now = self.env.context.get('field_now') or fields.Datetime.now()
+        return pytz.utc.localize(now).astimezone(pytz.timezone(self._field_tz() or 'UTC')).date()
+
+    def _field_leader(self):
+        """The supervisor whose active projects apply to this employee."""
+        self.ensure_one()
+        return self if self.field_role == 'supervisor' else self.field_supervisor_id
+
+    def _field_active_projects(self):
+        """Today's active projects of this supervisor, limited to the ones assigned to him.
+        A supervisor with a single assigned project does not need to activate it."""
+        self.ensure_one()
+        if self.field_active_date != self._field_today():
+            return self.field_project_ids if len(self.field_project_ids) == 1 else self.env['project.project']
+        return self.field_active_project_ids & self.field_project_ids
+
+    @api.model
+    def _field_staff(self):
+        """Everybody who marks attendance: there is no difference between field and office staff."""
+        return self._field_people()
+
+    def _field_tz(self):
+        """Timezone of the employee's own clock: theirs first, then their schedule's (Odoo 19 reversed it)."""
+        self.ensure_one()
+        return self.tz or self.resource_calendar_id.tz or self.company_id.resource_calendar_id.tz or 'UTC'
+
+    @api.model
+    def _field_people(self):
+        """Everybody who can mark: every active employee, with or without a role (only the office kiosk
+        links, which are not people, are left out). The role only decides who has a link of their own."""
+        return self.search(['|', ('field_role', '=', False), ('field_role', '!=', 'office')])
+
+    def _field_marks_automatically(self):
+        """Links where nobody chooses the mark: the office tablet, the automatic personal link and a
+        supervisor with automatic marking."""
+        self.ensure_one()
+        return self.field_role in ('office', 'staff') or (self.field_role == 'supervisor' and self.field_auto_mark)
+
+    def _field_is_crew(self):
+        """Every person gets the same rules (four marks, review and overtime to validate); only the
+        office kiosk link is not a person."""
+        self.ensure_one()
+        return self.field_role != 'office'
+
+    def _field_candidates(self):
+        """Employees that can be recognised on this owner's link.
+
+        A supervisor's phone and the office kiosk recognise everybody registered (field and office staff),
+        because supervisors borrow people from other crews; a personal link only its owner."""
+        self.ensure_one()
+        if self.field_role == 'supervisor':
+            return self | self.field_crew_ids.filtered('active') | self._field_people()
+        if self.field_role == 'office':
+            return self._field_people()
+        return self
+
+    def _field_keys(self):
+        """{compact key: employee} by registration number and by "ID de credencial"."""
+        keys = {}
+        for employee in self:
+            for value in employee._field_key_values():
+                keys.setdefault(compact_key(value), employee)
+        return keys
+
+    def _field_by_key(self, key):
+        """Field employee whose "ID de credencial" is ``key`` (card reader or typed)."""
+        key = compact_key(key)
+        if not key:
+            return self.browse()
+        return self._field_people()._field_keys().get(key, self.browse())
+
+    @api.model
+    def _field_clock_employee(self, key):
+        """Employee of a time clock user number: field staff first, then anyone (office staff)."""
+        employee = self._field_by_key(key)
+        if employee:
+            return employee
+        key = compact_key(key)
+        if not key:
+            return self.browse()
+        domain = [('field_role', '=', False), '|', ('barcode', '!=', False)]
+        domain += [('registration_number', '!=', False)] if 'registration_number' in self._fields else [('id', '=', 0)]
+        return self.search(domain)._field_keys().get(key, self.browse())
+
+    def _field_check_pin(self, pin):
+        """Check the employee PIN with lockout. Return True/False, raise when locked."""
+        self.ensure_one()
+        now = fields.Datetime.now()
+        if self.field_pin_locked_until and self.field_pin_locked_until > now:
+            raise UserError(_("PIN bloqueado por intentos fallidos. Pide a Operaciones que lo desbloquee."))
+        if self.pin and pin and str(pin) == self.pin:
+            if self.field_pin_failures:
+                self.field_pin_failures = 0
+            return True
+        failures = self.field_pin_failures + 1
+        vals = {'field_pin_failures': failures}
+        if failures >= PIN_MAX_FAILURES:
+            vals.update(field_pin_failures=0, field_pin_locked_until=now + timedelta(minutes=PIN_LOCK_MINUTES))
+        self.write(vals)
+        return False

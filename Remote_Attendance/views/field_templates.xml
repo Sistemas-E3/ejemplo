@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="field_page_head" name="Asistencias en campo: head">
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="theme-color" content="#1f2937"/>
+        <link rel="stylesheet" t-attf-href="/Remote_Attendance/static/src/css/field_kiosk.css?v=#{asset_version or ''}"/>
+        <script t-attf-src="/Remote_Attendance/static/lib/face-api/face-api.js?v=#{asset_version or ''}"></script>
+        <script t-attf-src="/Remote_Attendance/static/src/js/field_common.js?v=#{asset_version or ''}"></script>
+    </template>
+
+    <template id="field_kiosk_page" name="Asistencias en campo: kiosco">&lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <title>Marcaje en campo</title>
+                <t t-call="Remote_Attendance.field_page_head"/>
+                <link rel="manifest" t-attf-href="/campo/#{token}/app.webmanifest"/>
+                <link rel="apple-touch-icon" href="/Remote_Attendance/static/src/img/icon-192.png"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <script t-attf-src="/Remote_Attendance/static/src/js/field_offline.js?v=#{asset_version or ''}" defer="defer"></script>
+                <script t-attf-src="/Remote_Attendance/static/src/js/field_kiosk.js?v=#{asset_version or ''}" defer="defer"></script>
+            </head>
+            <body>
+                <main id="app" t-att-class="'fk fk-office' if auto else 'fk'" t-att-data-token="token"
+                      t-att-data-supervisor="'1' if is_supervisor else '0'" t-att-data-role="role"
+                      t-att-data-auto="'1' if auto else '0'">
+                    <header class="fk-header">
+                        <div>
+                            <div class="fk-owner" t-esc="owner_name"/>
+                            <div class="fk-projects" id="active-projects">Cargando…</div>
+                            <div class="fk-offline" id="offline-status" hidden="hidden"/>
+                        </div>
+                        <div class="fk-header-actions">
+                            <button type="button" class="fk-btn fk-btn-light" id="btn-mode" hidden="hidden">Cámara</button>
+                            <button type="button" class="fk-btn fk-btn-light" id="btn-projects" hidden="hidden">Proyectos de hoy</button>
+                        </div>
+                    </header>
+
+                    <section id="screen-register" class="fk-card" hidden="hidden">
+                        <h2>Este teléfono no está autorizado</h2>
+                        <p>Escribe un nombre para reconocerlo y pide a Recursos Humanos que lo apruebe.</p>
+                        <input type="text" id="device-name" class="fk-input" maxlength="60" placeholder="Ej. Teléfono de Juan"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-register">Solicitar autorización</button>
+                    </section>
+
+                    <section id="screen-pending" class="fk-card" hidden="hidden">
+                        <h2>Esperando aprobación</h2>
+                        <p>Recursos Humanos debe aprobar este teléfono.</p>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-refresh">Revisar de nuevo</button>
+                    </section>
+
+                    <section id="screen-blocked" class="fk-card" hidden="hidden">
+                        <h2>Teléfono revocado</h2>
+                        <p>Este teléfono ya no puede marcar. Habla con Recursos Humanos.</p>
+                    </section>
+
+                    <section id="screen-roll" class="fk-card" hidden="hidden">
+                        <h2>Pase de lista</h2>
+                        <div class="fk-days" id="roll-days"></div>
+                        <select id="roll-project" class="fk-input" aria-label="Proyecto"></select>
+                        <p id="roll-saved" hidden="hidden"></p>
+                        <div class="fk-row">
+                            <span class="fk-muted" id="roll-count">0 personas</span>
+                            <button type="button" class="fk-link" id="roll-all">Marcar a todos</button>
+                        </div>
+                        <div id="roll-list" class="fk-list"></div>
+                        <input type="search" id="roll-search" class="fk-input" placeholder="Agregar gente de otra cuadrilla…" autocomplete="off"/>
+                        <div id="roll-results" class="fk-list"></div>
+                        <input type="password" inputmode="numeric" id="roll-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="roll-send">Enviar lista</button>
+                    </section>
+
+                    <section id="screen-kiosk" hidden="hidden">
+                        <div class="fk-camera">
+                            <video id="video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+                            <canvas id="canvas" hidden="hidden"></canvas>
+                        <button type="button" class="fk-cam-switch" data-camera-switch="1" hidden="hidden" title="Cambiar cámara" aria-label="Cambiar entre cámara frontal y trasera">⟲ Cámara</button>
+                            <button type="button" class="fk-cam-switch" data-camera-switch="1" hidden="hidden" title="Cambiar cámara" aria-label="Cambiar entre cámara frontal y trasera">⟲ Cámara</button>
+                            <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
+                        </div>
+                        <div class="fk-gps" id="gps-status">Buscando ubicación…</div>
+                        <div class="fk-kinds" id="punch-kinds">
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="in" disabled="disabled">Entrada</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="lunch_out" disabled="disabled">Salida a comer</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="lunch_in" disabled="disabled">Regreso de comer</button>
+                            <button type="button" class="fk-btn fk-btn-primary" data-kind="out" disabled="disabled">Salida</button>
+                        </div>
+                        <div class="fk-office-result" id="office-result" hidden="hidden"></div>
+                        <div class="fk-card" id="enroll-box" hidden="hidden">
+                            <h2>Registrar rostro</h2>
+                            <input type="search" id="enroll-search" class="fk-input" placeholder="Buscar por nombre o clave" autocomplete="off"/>
+                            <select id="enroll-employee" class="fk-input" aria-label="Empleado"></select>
+                            <label class="fk-check">
+                                <input type="checkbox" id="enroll-consent"/>
+                                <span>El empleado firmó el consentimiento para el uso de su rostro.</span>
+                            </label>
+                            <p>Toma 3 fotos con la cara de frente y buena luz, moviendo un poco la cara entre cada una.</p>
+                            <div class="fk-muted" id="enroll-count">Fotos: 0</div>
+                            <button type="button" class="fk-btn fk-btn-light fk-btn-big" id="enroll-shot">Tomar foto</button>
+                            <input type="password" inputmode="numeric" id="enroll-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                            <button type="button" class="fk-btn fk-btn-primary" id="enroll-save" disabled="disabled">Guardar rostro</button>
+                            <button type="button" class="fk-btn fk-btn-light" id="enroll-close">Terminar</button>
+                        </div>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-change">Cambiar de proyecto</button>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-lunch" hidden="hidden">Registrar comida después</button>
+                        <button type="button" class="fk-btn fk-btn-light" id="btn-enroll" hidden="hidden">Registrar rostro de un empleado</button>
+                    </section>
+
+                    <section id="panel-projects" class="fk-sheet" hidden="hidden">
+                        <h2>Proyectos de hoy</h2>
+                        <p>Marca los proyectos en los que trabajará tu gente hoy.</p>
+                        <div id="assignable-list" class="fk-list"></div>
+                        <input type="password" inputmode="numeric" id="activate-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-activate">Guardar proyectos</button>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-projects">Cancelar</button>
+                    </section>
+
+                    <section id="panel-choose" class="fk-sheet" hidden="hidden">
+                        <h2>¿En qué proyecto estás?</h2>
+                        <div id="choose-list" class="fk-list"></div>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-choose">Cancelar</button>
+                    </section>
+
+                    <section id="panel-overtime" class="fk-sheet" hidden="hidden">
+                        <h2>¿Es tiempo extra?</h2>
+                        <p id="overtime-text">La salida es más de una hora después del horario.</p>
+                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="btn-overtime-yes">Sí, es tiempo extra</button>
+                        <button type="button" class="fk-btn fk-btn-light fk-btn-big" id="btn-overtime-no">No, solo cuenta el horario</button>
+                    </section>
+
+                    <section id="panel-lunch" class="fk-sheet" hidden="hidden">
+                        <h2>Registrar comida después</h2>
+                        <p>Para cuando no estuviste en el proyecto a la hora de la comida. Queda en revisión para RH.</p>
+                        <select id="lunch-employee" class="fk-input" aria-label="Persona"></select>
+                        <div class="fk-days" id="lunch-days"></div>
+                        <div class="fk-times">
+                            <label>Salió a comer<input type="time" id="lunch-out" class="fk-input" value="14:00"/></label>
+                            <label>Regresó<input type="time" id="lunch-in" class="fk-input" value="15:00"/></label>
+                        </div>
+                        <select id="lunch-project" class="fk-input" aria-label="Proyecto" hidden="hidden"></select>
+                        <input type="password" inputmode="numeric" id="lunch-pin" class="fk-input" placeholder="Tu PIN" autocomplete="off"/>
+                        <button type="button" class="fk-btn fk-btn-primary" id="btn-lunch-save">Guardar comida</button>
+                        <button type="button" class="fk-btn fk-btn-light" data-close="panel-lunch">Cancelar</button>
+                    </section>
+
+                    <div id="toast" class="fk-toast" hidden="hidden"></div>
+                </main>
+            </body>
+        </html>
+    </template>
+
+    <template id="field_enroll_photos_page" name="Asistencias en campo: rostros desde la foto del empleado">&lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <title>Registrar rostros con foto</title>
+                <t t-call="Remote_Attendance.field_page_head"/>
+                <script t-attf-src="/Remote_Attendance/static/src/js/field_enroll_photos.js?v=#{asset_version or ''}" defer="defer"></script>
+            </head>
+            <body>
+                <main id="app" class="fk fk-office">
+                    <header class="fk-header">
+                        <div>
+                            <div class="fk-owner">Registrar rostros con la foto del empleado</div>
+                            <div class="fk-projects">Usa la foto de la ficha de cada empleado de campo que aún no tiene rostro. Ya registrados: <t t-esc="done_count"/></div>
+                        </div>
+                    </header>
+                    <section class="fk-card">
+                        <label class="fk-check">
+                            <input type="checkbox" id="consent"/>
+                            <span>Tengo el consentimiento firmado de estos empleados para el uso de su rostro.</span>
+                        </label>
+                        <button type="button" class="fk-btn fk-btn-primary fk-btn-big" id="btn-start" disabled="disabled">Cargando reconocimiento facial…</button>
+                        <p id="summary"></p>
+                    </section>
+                    <section class="fk-card">
+                        <h2>Con foto (<t t-esc="len(pending)"/>)</h2>
+                        <p t-if="not pending">No hay empleados de campo con foto y sin rostro.</p>
+                        <div class="fk-list">
+                            <div class="fk-person" t-foreach="pending" t-as="employee" t-att-data-id="employee.id">
+                                <img t-att-src="'/web/image/hr.employee/%s/image_512' % employee.id" alt="" width="48" height="48" class="fk-thumb" crossorigin="anonymous"/>
+                                <span class="fk-name"><t t-esc="employee.name"/></span>
+                                <small class="fk-status">Pendiente</small>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="fk-card" t-if="without_photo">
+                        <h2>Sin foto (<t t-esc="len(without_photo)"/>)</h2>
+                        <p>Ponles foto en su ficha o regístralos con 3 fotos en vivo desde el enlace del supervisor.</p>
+                        <div class="fk-list">
+                            <div class="fk-person" t-foreach="without_photo" t-as="employee"><span t-esc="employee.name"/></div>
+                        </div>
+                    </section>
+                    <div id="toast" class="fk-toast" hidden="hidden"></div>
+                </main>
+            </body>
+        </html>
+    </template>
+
+    <template id="field_enroll_page" name="Asistencias en campo: registrar rostro">&lt;!DOCTYPE html&gt;
+        <html lang="es">
+            <head>
+                <title>Registrar rostro</title>
+                <t t-call="Remote_Attendance.field_page_head"/>
+                <script t-attf-src="/Remote_Attendance/static/src/js/field_enroll.js?v=#{asset_version or ''}" defer="defer"></script>
+            </head>
+            <body>
+                <main id="app" class="fk" t-att-data-employee="employee.id" t-att-data-consent="'1' if has_consent else '0'">
+                    <header class="fk-header">
+                        <div>
+                            <div class="fk-owner">Registrar rostro</div>
+                            <div class="fk-projects" t-esc="employee.name"/>
+                        </div>
+                    </header>
+                    <section class="fk-card" id="consent-box" t-if="not has_consent">
+                        <label class="fk-check">
+                            <input type="checkbox" id="consent"/>
+                            <span>El empleado firmó el consentimiento para el uso de sus datos biométricos.</span>
+                        </label>
+                    </section>
+                    <div class="fk-camera">
+                        <video id="video" autoplay="autoplay" muted="muted" playsinline="playsinline"></video>
+                        <canvas id="canvas" hidden="hidden"></canvas>
+                        <div class="fk-camera-hint" id="camera-hint">Preparando cámara…</div>
+                    </div>
+                    <p class="fk-gps">Toma 3 fotos con la cara de frente y con luz. Cambia un poco el ángulo entre cada una.</p>
+                    <div class="fk-shots" id="shots">Fotos: 0</div>
+                    <button type="button" class="fk-btn fk-btn-light fk-btn-big" id="btn-shot" disabled="disabled">Tomar foto</button>
+                    <button type="button" class="fk-btn fk-btn-primary" id="btn-save" disabled="disabled">Guardar</button>
+                    <div id="toast" class="fk-toast" hidden="hidden"></div>
+                </main>
+            </body>
+        </html>
+    </template>
+</odoo>

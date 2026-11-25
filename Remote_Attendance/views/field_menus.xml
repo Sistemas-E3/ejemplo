@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_field_enroll_photos" model="ir.actions.act_url">
+        <field name="name">Registrar rostros con foto</field>
+        <field name="url">/campo/enrolar/fotos</field>
+        <field name="target">new</field>
+    </record>
+    <!-- One bar for field and office: the report first, then marks, loads, people, devices and settings. -->
+    <menuitem id="menu_field_marks" name="Marcajes" parent="hr_attendance.menu_hr_attendance_root" sequence="2"
+              groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="hr_attendance.menu_hr_attendance_view_attendances_management" name="Todos los marcajes"
+              parent="menu_field_marks" sequence="1" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
+    <menuitem id="menu_field_photos" name="Marcajes con foto" parent="menu_field_marks" sequence="1"
+              action="hr_attendance_photo_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="hr_attendance.menu_hr_attendance_view_dashboard" name="Vista general"
+              parent="menu_field_marks" sequence="2" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
+    <menuitem id="menu_field_review" name="Por revisar" parent="menu_field_marks" sequence="3"
+              action="Remote_Attendance_review_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_by_supervisor" name="Por supervisor" parent="menu_field_marks" sequence="4"
+              action="Remote_Attendance_by_supervisor_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_overtime" name="Tiempo extra por validar" parent="menu_field_marks" sequence="5"
+              action="Remote_Attendance_overtime_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_clock_logs" name="Registros del checador" parent="menu_field_marks" sequence="6"
+              action="hr_field_clock_log_action" groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_offline" name="Marcajes sin señal" parent="menu_field_marks" sequence="7"
+              action="hr_field_offline_punch_action" groups="Remote_Attendance.group_field_operations"/>
+
+    <menuitem id="menu_field_load" name="Cargar" parent="hr_attendance.menu_hr_attendance_root" sequence="3"
+              groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_clock_import" name="Marcajes del checador (USB o Excel)" parent="menu_field_load"
+              sequence="1" action="hr_field_clock_import_action"/>
+    <menuitem id="menu_field_manual_load" name="Asistencias a mano" parent="menu_field_load" sequence="3"
+              action="hr_field_manual_load_action"/>
+
+    <menuitem id="menu_field_people" name="Personal" parent="hr_attendance.menu_hr_attendance_root" sequence="4"
+              groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_employees" name="Personal registrado" parent="menu_field_people" sequence="1"
+              action="hr_employee_field_action"/>
+    <menuitem id="menu_field_enroll_photos" name="Registrar rostros con foto" parent="menu_field_people" sequence="2"
+              action="action_field_enroll_photos"/>
+    <menuitem id="hr_attendance.menu_hr_attendance_employee" name="Empleados"
+              parent="menu_field_people" sequence="3"/>
+
+    <menuitem id="menu_field_equipment" name="Equipos" parent="hr_attendance.menu_hr_attendance_root" sequence="5"
+              groups="Remote_Attendance.group_field_operations"/>
+    <menuitem id="menu_field_devices" name="Teléfonos y tabletas" parent="menu_field_equipment" sequence="1"
+              action="hr_field_device_action"/>
+    <menuitem id="menu_field_clocks" name="Checadores" parent="menu_field_equipment" sequence="2"
+              action="hr_field_clock_action"/>
+
+    <menuitem id="hr_attendance.menu_hr_attendance_reporting" name="Análisis" parent="hr_attendance.menu_hr_attendance_root"
+              sequence="6" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
+
+    <menuitem id="hr_attendance.menu_hr_attendance_configuration" name="Configuración"
+              parent="hr_attendance.menu_hr_attendance_root" sequence="99" groups="Remote_Attendance.group_field_operations,-hr_attendance.group_hr_attendance_officer"/>
+    <record id="hr_attendance.menu_hr_attendance_overview" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+    <!-- Odoo's kiosk (badge or PIN, no face) and its onboarding tutorial: the face tablet replaces them. -->
+    <record id="hr_attendance.menu_action_open_form" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+    <record id="hr_attendance.menu_hr_attendance_onboarding" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+</odoo>

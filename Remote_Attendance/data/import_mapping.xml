@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- "Proyecto" also matches the analytic account (whose plan is called Proyecto); the list of hours
+         and Odoo's own timesheet export need it imported as the project of the timesheet. -->
+    <record id="import_mapping_timesheet_project" model="base_import.mapping">
+        <field name="res_model">account.analytic.line</field>
+        <field name="column_name">proyecto</field>
+        <field name="field_name">project_id</field>
+    </record>
+</odoo>
