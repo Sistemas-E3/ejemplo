@@ -38,8 +38,10 @@
               action="hr_employee_field_action"/>
     <menuitem id="menu_field_enroll_photos" name="Registrar rostros con foto" parent="menu_field_people" sequence="2"
               action="action_field_enroll_photos"/>
-    <menuitem id="hr_attendance.menu_hr_attendance_employee" name="Empleados"
-              parent="menu_field_people" sequence="3"/>
+    <!-- Odoo's "Empleados" list inside Asistencias: "Personal registrado" covers it. -->
+    <record id="hr_attendance.menu_hr_attendance_employee" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 
     <menuitem id="menu_field_equipment" name="Equipos" parent="hr_attendance.menu_hr_attendance_root" sequence="5"
               groups="Remote_Attendance.group_field_operations"/>
