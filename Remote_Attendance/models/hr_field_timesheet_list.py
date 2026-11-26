@@ -147,7 +147,6 @@ class HrFieldTimesheetList(models.Model):
         bold = book.add_format({'bold': True})
         date = book.add_format({'num_format': 'yyyy-mm-dd'})
         number = book.add_format({'num_format': '#,##0.00'})
-        clock = book.add_format({'num_format': 'hh:mm'})
 
         sheet = book.add_worksheet("Hojas de horas")
         sheet.write_row(0, 0, IMPORT_HEADERS, bold)

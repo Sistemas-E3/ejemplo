@@ -2,7 +2,6 @@ from datetime import datetime, time, timedelta
 
 import pytz
 
-from odoo import fields
 from odoo.exceptions import UserError
 from freezegun import freeze_time
 

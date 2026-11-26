@@ -69,8 +69,8 @@ class HrFieldService(models.AbstractModel):
 
     @api.model
     def _manual_enabled(self):
-        """Whether supervisor and worker links offer the manual options (marking with PIN from a list,
-        roll call and lunch registered later). Off by default: in the field attendance is only by camera.
+        """Whether supervisor links offer the manual options (roll call and lunch registered later).
+        Off by default: attendance is only by camera. Marking with a PIN is never possible.
         Turn it on with the system parameter ``Remote_Attendance.supervisor_manual`` = 1."""
         value = self.env['ir.config_parameter'].sudo().get_param('Remote_Attendance.supervisor_manual')
         return (value or '').strip().lower() in ('1', 'true', 'yes', 'si', 'sí')
@@ -148,8 +148,8 @@ class HrFieldService(models.AbstractModel):
         return {'active_projects': self._project_payload(projects)}
 
     @api.model
-    def _identify(self, owner, descriptor=None, employee_id=None, pin=None, badge=None):
-        """Return (employee, face_distance, review_reasons) or raise UserError."""
+    def _identify(self, owner, descriptor=None, badge=None):
+        """Return (employee, face_distance, review_reasons): by face, or by card at the office tablet."""
         candidates = owner._field_candidates()
         if badge and owner.field_role != 'office':
             # Only the office tablet has a card reader; elsewhere a typed number would mark anybody without a face.
@@ -235,8 +235,8 @@ class HrFieldService(models.AbstractModel):
         ``project``, ``state`` and ``reasons``."""
         if kind and kind not in PUNCH_KINDS:
             raise UserError(_("Tipo de marcaje inválido."))
-        manual = owner.field_role == 'office' or self._manual_enabled()
-        employee, face_distance, reasons = self._identify(owner, descriptor, None, None, badge)
+        # ``employee_id`` and ``pin`` are ignored: marking with a PIN instead of the face is not allowed.
+        employee, face_distance, reasons = self._identify(owner, descriptor, badge)
         if not employee:
             if reasons:
                 return {'error': reasons[0]}

@@ -1,7 +1,7 @@
 import io
 import unicodedata
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytz
 import xlsxwriter

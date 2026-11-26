@@ -1,2 +1,22 @@
+# Python
 __pycache__/
 *.py[cod]
+
+# Empaquetados y respaldos
+*.zip
+*.tar.gz
+*.dump
+*.sql
+*.bak
+
+# Editores y sistema
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Configuración local (nunca al repo)
+odoo-local/
+enterprise/

@@ -3,7 +3,6 @@ from datetime import timedelta
 from freezegun import freeze_time
 
 from odoo import fields
-from odoo.exceptions import UserError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
 from ..models.hr_field_service import gps_distance_m
